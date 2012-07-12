@@ -97,157 +97,229 @@ start_link(Scope) when is_atom(Scope) ->
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 
--spec join(name()) -> 'ok'.
+-spec join(name()) -> 'ok' | 'error'.
 
 join(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(?MODULE, {join, GroupName, self()}),
-    ok.
+    case gen_server:multi_call(?MODULE, {join, GroupName, self()}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec join(name() | scope(), pid() | name()) -> 'ok'.
+-spec join(name() | scope(), pid() | name()) -> 'ok' | 'error'.
 
 join(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(?MODULE, {join, GroupName, Pid}),
-    ok;
+    case gen_server:multi_call(?MODULE, {join, GroupName, Pid}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end;
 
 join(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(Scope, {join, GroupName, self()}),
-    ok.
+    case gen_server:multi_call(Scope, {join, GroupName, self()}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec join(scope(), name(), pid()) -> 'ok'.
+-spec join(scope(), name(), pid()) -> 'ok' | 'error'.
 
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_list(GroupName), is_pid(Pid),
          node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(Scope, {join, GroupName, Pid}),
-    ok.
+    case gen_server:multi_call(Scope, {join, GroupName, Pid}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec leave(name()) -> 'ok'.
+-spec leave(name()) -> 'ok' | 'error'.
 
 leave(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(?MODULE, {leave, GroupName, self()}),
-    ok.
+    case gen_server:multi_call(?MODULE, {leave, GroupName, self()}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec leave(name() | scope(), pid() | name()) -> 'ok'.
+-spec leave(name() | scope(), pid() | name()) -> 'ok' | 'error'.
 
 leave(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(?MODULE, {leave, GroupName, Pid}),
-    ok;
+    case gen_server:multi_call(?MODULE, {leave, GroupName, Pid}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end;
 
 leave(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(Scope, {leave, GroupName, self()}),
-    ok.
+    case gen_server:multi_call(Scope, {leave, GroupName, self()}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec leave(scope(), name(), pid()) -> 'ok'.
+-spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_list(GroupName), is_pid(Pid),
          node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
-    gen_server:multi_call(Scope, {leave, GroupName, Pid}),
-    ok.
+    case gen_server:multi_call(Scope, {leave, GroupName, Pid}) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
 -else. % GROUP_NAME_WITH_LOCAL_PIDS_ONLY not defined
 
--spec create(name()) -> 'ok'.
+-spec create(name()) -> 'ok' | 'error'.
 
 create(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    global:trans({{?MODULE, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(?MODULE, {create, GroupName})
-                 end),
-    ok.
+    case global:trans({{?MODULE, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(?MODULE,
+                                                {create, GroupName})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec create(scope(), name()) -> 'ok'.
+-spec create(scope(), name()) -> 'ok' | 'error'.
 
 create(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    global:trans({{Scope, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(Scope, {create, GroupName})
-                 end),
-    ok.
+    case global:trans({{Scope, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(Scope,
+                                                {create, GroupName})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec delete(name()) -> 'ok'.
+-spec delete(name()) -> 'ok' | 'error'.
 
 delete(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    global:trans({{?MODULE, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(?MODULE, {delete, GroupName})
-                 end),
-    ok.
+    case global:trans({{?MODULE, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(?MODULE,
+                                                {delete, GroupName})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec delete(scope(), name()) -> 'ok'.
+-spec delete(scope(), name()) -> 'ok' | 'error'.
 
 delete(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    global:trans({{Scope, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(Scope, {delete, GroupName})
-                 end),
-    ok.
+    case global:trans({{Scope, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(Scope,
+                                                {delete, GroupName})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec join(name(), pid()) -> 'ok'.
+-spec join(name(), pid()) -> 'ok' | 'error'.
 
 join(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid) ->
     group_name_validate_new(GroupName),
-    global:trans({{?MODULE, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(?MODULE, {join, GroupName, Pid})
-                 end),
-    ok.
+    case global:trans({{?MODULE, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(?MODULE,
+                                                {join, GroupName, Pid})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec join(scope(), name(), pid()) -> 'ok'.
+-spec join(scope(), name(), pid()) -> 'ok' | 'error'.
 
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_list(GroupName), is_pid(Pid) ->
     group_name_validate_new(GroupName),
-    global:trans({{Scope, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(Scope, {join, GroupName, Pid})
-                 end),
-    ok.
+    case global:trans({{Scope, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(Scope,
+                                                {join, GroupName, Pid})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec leave(name(), pid()) -> 'ok'.
+-spec leave(name(), pid()) -> 'ok' | 'error'.
 
 leave(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid) ->
     group_name_validate_new(GroupName),
-    global:trans({{?MODULE, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(?MODULE, {leave, GroupName, Pid})
-                 end),
-    ok.
+    case global:trans({{?MODULE, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(?MODULE,
+                                                {leave, GroupName, Pid})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
--spec leave(scope(), name(), pid()) -> 'ok'.
+-spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_list(GroupName), is_pid(Pid) ->
     group_name_validate_new(GroupName),
-    global:trans({{Scope, GroupName}, self()},
-                 fun() ->
-                     gen_server:multi_call(Scope, {leave, GroupName, Pid})
-                 end),
-    ok.
+    case global:trans({{Scope, GroupName}, self()},
+                      fun() ->
+                          gen_server:multi_call(Scope,
+                                                {leave, GroupName, Pid})
+                      end) of
+        {[_ | _], _} ->
+            ok;
+        _ ->
+            error
+    end.
 
 -endif.
 
