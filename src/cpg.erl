@@ -23,11 +23,11 @@
 %%
 %% %CopyrightEnd%
 %%
--module(cpg_list_pg).
+-module(cpg).
 
 -behaviour(gen_server).
 
--include("cpg_list_pg_constants.hrl").
+-include("cpg_constants.hrl").
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 % does not require global locking
@@ -67,25 +67,29 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          code_change/3, terminate/2]).
 
--include("cpg_list_pg_data.hrl").
+-include("cpg_data.hrl").
 
 -record(state,
     {
         scope = undefined, % locally registered process name
-        groups = cpg_list_pg_data:get_empty_groups(),% string()->#list_pg_data{}
-        pids = dict:new()                            % pid()->list(string())
+        groups = cpg_data:get_empty_groups(), % string() -> #cpg_data{}
+        pids = dict:new()                     % pid() -> list(string())
     }).
 
-%%% monitors are used instead of links.
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
 
-%%%
-%%% Exported functions
-%%%
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec start_link() -> {'ok', pid()} | {'error', term()}.
 
 start_link() ->
-    start_link(?MODULE). % cpg_list_pg is the default Scope
+    start_link(?DEFAULT_SCOPE).
 
 -spec start_link(atom()) -> {'ok', pid()} | {'error', term()}.
 
@@ -97,12 +101,18 @@ start_link(Scope) when is_atom(Scope) ->
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec join(name()) -> 'ok' | 'error'.
 
 join(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    case gen_server:multi_call(?MODULE, {join, GroupName, self()}) of
+    case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, self()}) of
         {[_ | _], _} ->
             ok;
         _ ->
@@ -114,7 +124,7 @@ join(GroupName)
 join(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
-    case gen_server:multi_call(?MODULE, {join, GroupName, Pid}) of
+    case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, Pid}) of
         {[_ | _], _} ->
             ok;
         _ ->
@@ -144,12 +154,18 @@ join(Scope, GroupName, Pid)
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec leave(name()) -> 'ok' | 'error'.
 
 leave(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    case gen_server:multi_call(?MODULE, {leave, GroupName, self()}) of
+    case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, self()}) of
         {[_ | _], _} ->
             ok;
         _ ->
@@ -161,7 +177,7 @@ leave(GroupName)
 leave(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
-    case gen_server:multi_call(?MODULE, {leave, GroupName, Pid}) of
+    case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, Pid}) of
         {[_ | _], _} ->
             ok;
         _ ->
@@ -193,14 +209,20 @@ leave(Scope, GroupName, Pid)
 
 -else. % GROUP_NAME_WITH_LOCAL_PIDS_ONLY not defined
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec create(name()) -> 'ok' | 'error'.
 
 create(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    case global:trans({{?MODULE, GroupName}, self()},
+    case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(?MODULE,
+                          gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {create, GroupName})
                       end) of
         {[_ | _], _} ->
@@ -225,14 +247,20 @@ create(Scope, GroupName)
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec delete(name()) -> 'ok' | 'error'.
 
 delete(GroupName)
     when is_list(GroupName) ->
     group_name_validate_new(GroupName),
-    case global:trans({{?MODULE, GroupName}, self()},
+    case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(?MODULE,
+                          gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {delete, GroupName})
                       end) of
         {[_ | _], _} ->
@@ -257,14 +285,20 @@ delete(Scope, GroupName)
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec join(name(), pid()) -> 'ok' | 'error'.
 
 join(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid) ->
     group_name_validate_new(GroupName),
-    case global:trans({{?MODULE, GroupName}, self()},
+    case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(?MODULE,
+                          gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {join, GroupName, Pid})
                       end) of
         {[_ | _], _} ->
@@ -289,14 +323,20 @@ join(Scope, GroupName, Pid)
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec leave(name(), pid()) -> 'ok' | 'error'.
 
 leave(GroupName, Pid)
     when is_list(GroupName), is_pid(Pid) ->
     group_name_validate_new(GroupName),
-    case global:trans({{?MODULE, GroupName}, self()},
+    case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(?MODULE,
+                          gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {leave, GroupName, Pid})
                       end) of
         {[_ | _], _} ->
@@ -327,17 +367,23 @@ leave(Scope, GroupName, Pid)
 
 -type gcp_error_reason() :: {'no_process', name()} | {'no_such_group', name()}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_members(name()) -> get_members_ret().
    
 get_members(GroupName)
     when is_list(GroupName) ->
-    gen_server:call(?MODULE, {get_members, GroupName}).
+    gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName}).
 
 -spec get_members(name() | scope(), pid() | name()) -> get_members_ret().
    
 get_members(GroupName, Exclude)
     when is_list(GroupName), is_pid(Exclude) ->
-    gen_server:call(?MODULE, {get_members, GroupName, Exclude});
+    gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName, Exclude});
 
 get_members(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
@@ -349,11 +395,17 @@ get_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_list(GroupName), is_pid(Exclude) ->
     gen_server:call(Scope, {get_members, GroupName, Exclude}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_local_members(name()) -> get_members_ret().
 
 get_local_members(GroupName)
     when is_list(GroupName) ->
-    gen_server:call(?MODULE, {get_local_members, GroupName}).
+    gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName}).
 
 -spec get_local_members(scope(), name()) -> get_members_ret().
 
@@ -361,10 +413,16 @@ get_local_members(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
     gen_server:call(Scope, {get_local_members, GroupName}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec which_groups() -> [name()].
 
 which_groups() ->
-    gen_server:call(?MODULE, which_groups).
+    gen_server:call(?DEFAULT_SCOPE, which_groups).
 
 -spec which_groups(scope()) -> [name()].
 
@@ -372,18 +430,24 @@ which_groups(Scope)
     when is_atom(Scope) ->
     gen_server:call(Scope, which_groups).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_closest_pid(name()) -> pid() | {'error', gcp_error_reason()}.
 
 get_closest_pid(GroupName)
     when is_list(GroupName) ->
-    gen_server:call(?MODULE, {get_closest_pid, GroupName}).
+    gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName}).
 
 -spec get_closest_pid(name() | scope(), pid() | name()) ->
     pid() | {'error', gcp_error_reason()}.
 
 get_closest_pid(GroupName, Exclude)
     when is_list(GroupName), is_pid(Exclude) ->
-    gen_server:call(?MODULE, {get_closest_pid, GroupName, Exclude});
+    gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName, Exclude});
 
 get_closest_pid(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
@@ -396,18 +460,24 @@ get_closest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_list(GroupName), is_pid(Exclude) ->
     gen_server:call(Scope, {get_closest_pid, GroupName, Exclude}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Text.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_random_pid(name()) -> pid() | {'error', gcp_error_reason()}.
 
 get_random_pid(GroupName)
     when is_list(GroupName) ->
-    gen_server:call(?MODULE, {get_random_pid, GroupName}).
+    gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName}).
 
 -spec get_random_pid(name() | scope(), pid() | name()) ->
     pid() | {'error', gcp_error_reason()}.
 
 get_random_pid(GroupName, Exclude)
     when is_list(GroupName), is_pid(Exclude) ->
-    gen_server:call(?MODULE, {get_random_pid, GroupName, Exclude});
+    gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName, Exclude});
 
 get_random_pid(Scope, GroupName)
     when is_atom(Scope), is_list(GroupName) ->
@@ -420,9 +490,9 @@ get_random_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_list(GroupName), is_pid(Exclude) ->
     gen_server:call(Scope, {get_random_pid, GroupName, Exclude}).
 
-%%%
+%%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
-%%%
+%%%------------------------------------------------------------------------
 
 -spec init([scope()]) -> {'ok', #state{}}.
 
@@ -458,42 +528,42 @@ handle_call({join, GroupName, Pid}, _, State) ->
 handle_call({leave, GroupName, Pid}, _, State) ->
     {reply, ok, leave_group(GroupName, Pid, State)};
 
-handle_call(list_pg_data, _,
+handle_call(cpg_data, _,
             #state{groups = Groups} = State) ->
     {reply, Groups, State};
 
 handle_call({get_members, GroupName}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_members(GroupName, Groups), State};
+    {reply, cpg_data:get_members(GroupName, Groups), State};
 
 handle_call({get_members, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_members(GroupName, Exclude, Groups), State};
+    {reply, cpg_data:get_members(GroupName, Exclude, Groups), State};
 
 handle_call({get_local_members, GroupName}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_local_members(GroupName, Groups), State};
+    {reply, cpg_data:get_local_members(GroupName, Groups), State};
 
 handle_call(which_groups, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:which_groups(Groups), State};
+    {reply, cpg_data:which_groups(Groups), State};
 
 handle_call({get_closest_pid, GroupName}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_closest_pid(GroupName, Groups), State};
+    {reply, cpg_data:get_closest_pid(GroupName, Groups), State};
 
 handle_call({get_closest_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_closest_pid(GroupName, Exclude, Groups),
+    {reply, cpg_data:get_closest_pid(GroupName, Exclude, Groups),
      State};
 
 handle_call({get_random_pid, GroupName}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_random_pid(GroupName, Groups), State};
+    {reply, cpg_data:get_random_pid(GroupName, Groups), State};
 
 handle_call({get_random_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_list_pg_data:get_random_pid(GroupName, Exclude, Groups), State};
+    {reply, cpg_data:get_random_pid(GroupName, Exclude, Groups), State};
 
 handle_call(_, _, State) ->
     {stop, {error, invalid_request}, error, State}.
@@ -523,9 +593,9 @@ handle_info({new, Node},
     gen_server:cast({Scope, Node}, {exchange, node(), State}),
     {noreply, State};
 
-handle_info({list_pg_data, From},
+handle_info({cpg_data, From},
             #state{groups = Groups} = State) ->
-    From ! {list_pg_data, Groups},
+    From ! {cpg_data, Groups},
     {noreply, State};
 
 handle_info(_, State) ->
@@ -539,62 +609,62 @@ terminate(_, _) ->
 code_change(_, State, _) ->
     {ok, State}.
 
-%%%
-%%% Local functions
-%%%
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 
 create_group(GroupName, #state{groups = Groups} = State) ->
-    NewGroups = trie:update(GroupName, fun(OldValue) -> OldValue end,
-                            #list_pg_data{}, Groups),
+    NewGroups = ?GROUP_STORAGE:update(GroupName,
+        fun(OldValue) -> OldValue end, #cpg_data{}, Groups),
     State#state{groups = NewGroups}.
 
 delete_group(GroupName, #state{groups = Groups,
                                pids = Pids} = State) ->
-    case trie:find(GroupName, Groups) of
+    case ?GROUP_STORAGE:find(GroupName, Groups) of
         error ->
             State;
-        {ok, #list_pg_data{local_count = 0,
-                           remote_count = 0}} ->
-            State#state{groups = trie:erase(GroupName, Groups)};
-        {ok, #list_pg_data{local = Local,
-                           remote = Remote}} ->
-            NewPids = lists:foldl(fun(#list_pg_data_pid{pid = Pid,
-                                                        monitor = Ref}, P) ->
+        {ok, #cpg_data{local_count = 0,
+                       remote_count = 0}} ->
+            State#state{groups = ?GROUP_STORAGE:erase(GroupName, Groups)};
+        {ok, #cpg_data{local = Local,
+                       remote = Remote}} ->
+            NewPids = lists:foldl(fun(#cpg_data_pid{pid = Pid,
+                                                    monitor = Ref}, P) ->
                 true = erlang:demonitor(Ref, [flush]),
                 dict:update(Pid,
                             fun(OldValue) ->
                                 lists:delete(GroupName, OldValue)
                             end, P)
             end, Pids, Local ++ Remote),
-            State#state{groups = trie:erase(GroupName, Groups),
+            State#state{groups = ?GROUP_STORAGE:erase(GroupName, Groups),
                         pids = NewPids}
     end.
 
 join_group(GroupName, Pid, #state{groups = Groups,
                                   pids = Pids} = State) ->
-    Entry = #list_pg_data_pid{pid = Pid,
-                              monitor = erlang:monitor(process, Pid)},
+    Entry = #cpg_data_pid{pid = Pid,
+                          monitor = erlang:monitor(process, Pid)},
     NewGroups = if
         node() =:= node(Pid) ->
-            trie:update(GroupName,
-                        fun(#list_pg_data{local_count = LocalI,
-                                          local = Local} = OldValue) ->
-                            OldValue#list_pg_data{local_count = LocalI + 1,
-                                                  local = [Entry | Local]}
-                        end,
-                        #list_pg_data{local_count = 1,
-                                      local = [Entry]},
-                        Groups);
+            ?GROUP_STORAGE:update(GroupName,
+                fun(#cpg_data{local_count = LocalI,
+                              local = Local} = OldValue) ->
+                    OldValue#cpg_data{local_count = LocalI + 1,
+                                      local = [Entry | Local]}
+                end,
+                #cpg_data{local_count = 1,
+                          local = [Entry]},
+                Groups);
         true ->
-            trie:update(GroupName,
-                        fun(#list_pg_data{remote_count = RemoteI,
-                                          remote = Remote} = OldValue) ->
-                            OldValue#list_pg_data{remote_count = RemoteI + 1,
-                                                  remote = [Entry | Remote]}
-                        end,
-                        #list_pg_data{remote_count = 1,
-                                      remote = [Entry]},
-                        Groups)
+            ?GROUP_STORAGE:update(GroupName,
+                fun(#cpg_data{remote_count = RemoteI,
+                              remote = Remote} = OldValue) ->
+                    OldValue#cpg_data{remote_count = RemoteI + 1,
+                                      remote = [Entry | Remote]}
+                end,
+                #cpg_data{remote_count = 1,
+                          remote = [Entry]},
+                Groups)
     end,
     GroupNameList = [GroupName],
     NewPids = dict:update(Pid,
@@ -607,7 +677,7 @@ join_group(GroupName, Pid, #state{groups = Groups,
 
 leave_group(GroupName, Pid, #state{groups = Groups,
                                    pids = Pids} = State) ->
-    Fpartition = fun(#list_pg_data_pid{pid = P, monitor = Ref}) ->
+    Fpartition = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
         if 
             P == Pid ->
                 true = erlang:demonitor(Ref, [flush]),
@@ -618,25 +688,25 @@ leave_group(GroupName, Pid, #state{groups = Groups,
     end,
     NewGroups = if
         node() =:= node(Pid) ->
-            trie:update(GroupName,
-                        fun(#list_pg_data{local_count = LocalI,
-                                          local = Local} = OldValue) ->
-                            {OldLocal,
-                             NewLocal} = lists:partition(Fpartition, Local),
-                            OldValue#list_pg_data{local_count = LocalI -
-                                                  erlang:length(OldLocal),
-                                                  local = NewLocal}
-                        end, Groups);
+            ?GROUP_STORAGE:update(GroupName,
+                fun(#cpg_data{local_count = LocalI,
+                              local = Local} = OldValue) ->
+                    {OldLocal,
+                     NewLocal} = lists:partition(Fpartition, Local),
+                    OldValue#cpg_data{local_count = LocalI -
+                                      erlang:length(OldLocal),
+                                      local = NewLocal}
+                end, Groups);
         true ->
-            trie:update(GroupName,
-                        fun(#list_pg_data{remote_count = RemoteI,
-                                          remote = Remote} = OldValue) ->
-                            {OldRemote,
-                             NewRemote} = lists:partition(Fpartition, Remote),
-                            OldValue#list_pg_data{remote_count = RemoteI -
-                                                  erlang:length(OldRemote),
-                                                  remote = NewRemote}
-                        end, Groups)
+            ?GROUP_STORAGE:update(GroupName,
+                fun(#cpg_data{remote_count = RemoteI,
+                              remote = Remote} = OldValue) ->
+                    {OldRemote,
+                     NewRemote} = lists:partition(Fpartition, Remote),
+                    OldValue#cpg_data{remote_count = RemoteI -
+                                      erlang:length(OldRemote),
+                                      remote = NewRemote}
+                end, Groups)
     end,
     NewPids = dict:update(Pid,
                           fun(OldValue) ->
@@ -651,12 +721,12 @@ store_conflict_add(0, Entries, _) ->
 store_conflict_add(I, Entries, Pid) ->
     Ref = erlang:monitor(process, Pid),
     store_conflict_add(I - 1,
-                       [#list_pg_data_pid{pid = Pid,
-                                          monitor = Ref} | Entries], Pid).
+                       [#cpg_data_pid{pid = Pid,
+                                      monitor = Ref} | Entries], Pid).
 
 store_conflict_remove_monitors([]) ->
     ok;
-store_conflict_remove_monitors([#list_pg_data_pid{monitor = M} | OldEntries]) ->
+store_conflict_remove_monitors([#cpg_data_pid{monitor = M} | OldEntries]) ->
     true = erlang:demonitor(M, [flush]),
     store_conflict_remove_monitors(OldEntries).
 
@@ -668,12 +738,12 @@ store_conflict_remove(I, Entries) ->
 store_conflict_f([], V2, _) ->
     V2;
 store_conflict_f([Pid | V1AllPids],
-                 #list_pg_data{local_count = LocalI,
-                               local = Local,
-                               remote_count = RemoteI,
-                               remote = Remote} = V2, V1All) ->
+                 #cpg_data{local_count = LocalI,
+                           local = Local,
+                           remote_count = RemoteI,
+                           remote = Remote} = V2, V1All) ->
     % for each external Pid, check the internal Pids within the same group
-    Fpartition = fun(#list_pg_data_pid{pid = P}) ->
+    Fpartition = fun(#cpg_data_pid{pid = P}) ->
         if 
             P == Pid ->
                 true;
@@ -693,16 +763,16 @@ store_conflict_f([Pid | V1AllPids],
                     % add
                     NewLocal = store_conflict_add(I, Local, Pid),
                     store_conflict_f(V1AllPids,
-                                     V2#list_pg_data{local_count = LocalI + I,
-                                                     local = NewLocal},
+                                     V2#cpg_data{local_count = LocalI + I,
+                                                 local = NewLocal},
                                      V1All);
                 I < 0 ->
                     % remove
                     NewV2Pids = store_conflict_remove(I * -1, V2Pids),
                     store_conflict_f(V1AllPids,
-                                     V2#list_pg_data{local_count = LocalI + I,
-                                                     local = NewV2Pids ++
-                                                             LocalRest},
+                                     V2#cpg_data{local_count = LocalI + I,
+                                                 local = NewV2Pids ++
+                                                         LocalRest},
                                      V1All);
                 true ->
                     store_conflict_f(V1AllPids, V2, V1All)
@@ -718,16 +788,16 @@ store_conflict_f([Pid | V1AllPids],
                     % add
                     NewRemote = store_conflict_add(I, Remote, Pid),
                     store_conflict_f(V1AllPids,
-                                     V2#list_pg_data{remote_count = RemoteI + I,
-                                                     remote = NewRemote},
+                                     V2#cpg_data{remote_count = RemoteI + I,
+                                                 remote = NewRemote},
                                      V1All);
                 I < 0 ->
                     % remove
                     NewV2Pids = store_conflict_remove(I * -1, V2Pids),
                     store_conflict_f(V1AllPids,
-                                     V2#list_pg_data{remote_count = RemoteI + I,
-                                                     remote = NewV2Pids ++
-                                                              RemoteRest},
+                                     V2#cpg_data{remote_count = RemoteI + I,
+                                                 remote = NewV2Pids ++
+                                                          RemoteRest},
                                      V1All);
                 true ->
                     store_conflict_f(V1AllPids, V2, V1All)
@@ -735,36 +805,36 @@ store_conflict_f([Pid | V1AllPids],
     end.
 
 store_conflict(_,
-               #list_pg_data{local = V1Local,
-                             remote = V1Remote}, V2) ->
+               #cpg_data{local = V1Local,
+                         remote = V1Remote}, V2) ->
     % V1 is external
     % V2 is internal
     V1All = V1Local ++ V1Remote,
-    store_conflict_f(lists:usort(lists:map(fun(#list_pg_data_pid{pid = Pid}) ->
+    store_conflict_f(lists:usort(lists:map(fun(#cpg_data_pid{pid = Pid}) ->
                          Pid
                      end, V1All)),
                      V2, V1All).
 
 store_new_group(OldEntries) ->
-    store_new_group(OldEntries, #list_pg_data{}).
+    store_new_group(OldEntries, #cpg_data{}).
 
 store_new_group([], V2) ->
     V2;
-store_new_group([#list_pg_data_pid{pid = Pid} = E | OldEntries],
-                 #list_pg_data{local_count = LocalI,
-                               local = Local,
-                               remote_count = RemoteI,
-                               remote = Remote} = V2) ->
-    NewE = E#list_pg_data_pid{monitor = erlang:monitor(process, Pid)},
+store_new_group([#cpg_data_pid{pid = Pid} = E | OldEntries],
+                 #cpg_data{local_count = LocalI,
+                           local = Local,
+                           remote_count = RemoteI,
+                           remote = Remote} = V2) ->
+    NewE = E#cpg_data_pid{monitor = erlang:monitor(process, Pid)},
     if
         node() =:= node(Pid) ->
             store_new_group(OldEntries,
-                            V2#list_pg_data{local_count = LocalI + 1,
-                                            local = [NewE | Local]});
+                            V2#cpg_data{local_count = LocalI + 1,
+                                        local = [NewE | Local]});
         true ->
             store_new_group(OldEntries,
-                            V2#list_pg_data{remote_count = RemoteI + 1,
-                                            remote = [NewE | Remote]})
+                            V2#cpg_data{remote_count = RemoteI + 1,
+                                        remote = [NewE | Remote]})
     end.
 
 store(#state{groups = ExternalGroups,
@@ -773,19 +843,20 @@ store(#state{groups = ExternalGroups,
              pids = Pids} = State) ->
     % V1 is external
     % V2 is internal
-    NewGroups = trie:fold(fun(GroupName,
-                              #list_pg_data{local = V1Local,
-                                            remote = V1Remote} = V1, T) ->
-        case trie:is_key(GroupName, T) of
+    NewGroups = ?GROUP_STORAGE:fold(fun(GroupName,
+        #cpg_data{local = V1Local,
+                  remote = V1Remote} = V1, T) ->
+        case ?GROUP_STORAGE:is_key(GroupName, T) of
             true ->
                 % merge the external group in
-                trie:update(GroupName,
-                            fun(V2) ->
-                                store_conflict(GroupName, V1, V2)
-                            end, T);
+                ?GROUP_STORAGE:update(GroupName,
+                    fun(V2) ->
+                        store_conflict(GroupName, V1, V2)
+                    end, T);
             false ->
                 % create the new external group as an internal group
-                trie:store(GroupName, store_new_group(V1Local ++ V1Remote), T)
+                ?GROUP_STORAGE:store(GroupName,
+                    store_new_group(V1Local ++ V1Remote), T)
         end
     end, Groups, ExternalGroups),
     NewPids = dict:merge(fun(_, V1, V2) ->

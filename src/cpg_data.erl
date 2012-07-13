@@ -50,7 +50,7 @@
 %%% @version 1.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_list_pg_data).
+-module(cpg_data).
 -author('mjtruog [at] gmail (dot) com').
 
 -export([get_groups/0,
@@ -66,35 +66,35 @@
          get_random_pid/2,
          get_random_pid/3]).
 
--include("cpg_list_pg_data.hrl").
--include("cpg_list_pg_constants.hrl").
+-include("cpg_data.hrl").
+-include("cpg_constants.hrl").
 
 get_groups() ->
-    gen_server:call(cpg_list_pg, list_pg_data).
+    gen_server:call(?DEFAULT_SCOPE, cpg_data).
 
 get_groups(Scope) when is_atom(Scope) ->
-    gen_server:call(Scope, list_pg_data);
+    gen_server:call(Scope, cpg_data);
 
-% send the groups as {list_pg_data, Groups} after Time milliseconds to self()
+% send the groups as {cpg_data, Groups} after Time milliseconds to self()
 get_groups(Time) when is_integer(Time) ->
-    erlang:send_after(Time, cpg_list_pg, {list_pg_data, self()}).
+    erlang:send_after(Time, ?DEFAULT_SCOPE, {cpg_data, self()}).
 
 get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
-    erlang:send_after(Time, Scope, {list_pg_data, self()}).
+    erlang:send_after(Time, Scope, {cpg_data, self()}).
 
 get_empty_groups() ->
-    trie:new().
+    ?GROUP_STORAGE:new().
 
 get_members(GroupName, Groups) when is_list(GroupName) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, Pattern, #list_pg_data{local_count = 0,
-                                    remote_count = 0}} ->
+        {ok, Pattern, #cpg_data{local_count = 0,
+                                remote_count = 0}} ->
             {ok, Pattern, []};
-        {ok, Pattern, #list_pg_data{local = Local,
-                                    remote = Remote}} ->
-            {ok, Pattern, lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
+        {ok, Pattern, #cpg_data{local = Local,
+                                remote = Remote}} ->
+            {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 [Pid | L]
             end, [], Remote ++ Local)}
     end.
@@ -104,12 +104,12 @@ get_members(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #list_pg_data{local_count = 0,
-                              remote_count = 0}} ->
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
             {error, {'no_process', GroupName}};
-        {ok, Pattern, #list_pg_data{local = Local,
-                                    remote = Remote}} ->
-            Members = lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
+        {ok, Pattern, #cpg_data{local = Local,
+                                remote = Remote}} ->
+            Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 if
                     Pid =/= Exclude ->
                         [Pid | L];
@@ -125,32 +125,34 @@ get_members(GroupName, Exclude, Groups)
             end
     end.
 
-get_local_members(GroupName, Groups) when is_list(GroupName) ->
+get_local_members(GroupName, Groups)
+    when is_list(GroupName) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, Pattern, #list_pg_data{local = Local}} ->
-            {ok, Pattern, lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
+        {ok, Pattern, #cpg_data{local = Local}} ->
+            {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 [Pid | L]
             end, [], Local)}
     end.
 
 which_groups(Groups) ->
-    trie:fetch_keys(Groups).
+    ?GROUP_STORAGE:fetch_keys(Groups).
 
-get_closest_pid(GroupName, Groups) when is_list(GroupName) ->
+get_closest_pid(GroupName, Groups)
+    when is_list(GroupName) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #list_pg_data{local_count = 0,
-                              remote_count = 0}} ->
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
             {error, {'no_process', GroupName}};
-        {ok, Pattern, #list_pg_data{local_count = 0,
-                                    remote_count = RemoteCount,
-                                    remote = Remote}} ->
+        {ok, Pattern, #cpg_data{local_count = 0,
+                                remote_count = RemoteCount,
+                                remote = Remote}} ->
             pick(RemoteCount, Remote, Pattern);
-        {ok, Pattern, #list_pg_data{local_count = LocalCount,
-                                    local = Local}} ->
+        {ok, Pattern, #cpg_data{local_count = LocalCount,
+                                local = Local}} ->
             pick(LocalCount, Local, Pattern)
     end.
 
@@ -159,32 +161,33 @@ get_closest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #list_pg_data{local_count = 0,
-                              remote_count = 0}} ->
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
             {error, {'no_process', GroupName}};
-        {ok, Pattern, #list_pg_data{local_count = 0,
-                                    remote_count = RemoteCount,
-                                    remote = Remote}} ->
+        {ok, Pattern, #cpg_data{local_count = 0,
+                                remote_count = RemoteCount,
+                                remote = Remote}} ->
             pick(RemoteCount, Remote, Exclude, GroupName, Pattern);
-        {ok, Pattern, #list_pg_data{local_count = LocalCount,
-                                    local = Local,
-                                    remote_count = RemoteCount,
-                                    remote = Remote}} ->
+        {ok, Pattern, #cpg_data{local_count = LocalCount,
+                                local = Local,
+                                remote_count = RemoteCount,
+                                remote = Remote}} ->
             pick(LocalCount, Local, RemoteCount, Remote,
                  Exclude, GroupName, Pattern)
     end.
 
-get_random_pid(GroupName, Groups) when is_list(GroupName) ->
+get_random_pid(GroupName, Groups)
+    when is_list(GroupName) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #list_pg_data{local_count = 0,
-                              remote_count = 0}} ->
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
             {error, {'no_process', GroupName}};
-        {ok, Pattern, #list_pg_data{local_count = LocalCount,
-                                    local = Local,
-                                    remote_count = RemoteCount,
-                                    remote = Remote}} ->
+        {ok, Pattern, #cpg_data{local_count = LocalCount,
+                                local = Local,
+                                remote_count = RemoteCount,
+                                remote = Remote}} ->
             pick(LocalCount + RemoteCount, Local ++ Remote, Pattern)
     end.
 
@@ -193,13 +196,13 @@ get_random_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #list_pg_data{local_count = 0,
-                              remote_count = 0}} ->
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
             {error, {'no_process', GroupName}};
-        {ok, Pattern, #list_pg_data{local_count = LocalCount,
-                                    local = Local,
-                                    remote_count = RemoteCount,
-                                    remote = Remote}} ->
+        {ok, Pattern, #cpg_data{local_count = LocalCount,
+                                local = Local,
+                                remote_count = RemoteCount,
+                                remote = Remote}} ->
             pick(LocalCount + RemoteCount, Local ++ Remote,
                  Exclude, GroupName, Pattern)
     end.
@@ -214,14 +217,14 @@ get_random_pid(GroupName, Exclude, Groups)
 -ifdef(GROUP_NAME_PATTERN_MATCHING).
 % matching with patterns
 group_find(GroupName, Groups) ->
-    try trie:find_match(GroupName, Groups) catch
+    try ?GROUP_STORAGE:find_match(GroupName, Groups) catch
         exit:badarg ->
             error
     end.
 -else.
 % matching without patterns
 group_find(GroupName, Groups) ->
-    case trie:find(GroupName, Groups) of
+    case ?GROUP_STORAGE:find(GroupName, Groups) of
         {ok, Value} ->
             {ok, GroupName, Value};
         error ->
@@ -230,7 +233,7 @@ group_find(GroupName, Groups) ->
 -endif.
 
 pick(N, L, Pattern) ->
-    #list_pg_data_pid{pid = Pid} = lists:nth(random(N), L),
+    #cpg_data_pid{pid = Pid} = lists:nth(random(N), L),
     {ok, Pattern, Pid}.
 
 pick_i_exclude(_, _, [], [], _, GroupName, _) ->
@@ -240,32 +243,32 @@ pick_i_exclude(I, Count, Filtered, [], _, _, Pattern) ->
     {ok, Pattern, lists:nth((I rem Count) + 1, Filtered)};
 
 pick_i_exclude(I, Count, Filtered,
-               [#list_pg_data_pid{pid = Exclude} | L],
+               [#cpg_data_pid{pid = Exclude} | L],
                Exclude, GroupName, Pattern) ->
     pick_i_exclude(I, Count, Filtered, L, Exclude, GroupName, Pattern);
     
 pick_i_exclude(I, Count, Filtered,
-               [#list_pg_data_pid{pid = Pid} | L],
+               [#cpg_data_pid{pid = Pid} | L],
                Exclude, GroupName, Pattern) ->
     pick_i_exclude(I, Count + 1, [Pid | Filtered], L,
                    Exclude, GroupName, Pattern).
 
 pick_i(I, I, Filtered,
-       [#list_pg_data_pid{pid = Exclude} | L],
+       [#cpg_data_pid{pid = Exclude} | L],
        Exclude, GroupName, Pattern) ->
     pick_i_exclude(I, erlang:length(Filtered), Filtered, L,
                    Exclude, GroupName, Pattern);
 
-pick_i(I, I, _, [#list_pg_data_pid{pid = Pid} | _], _, _, Pattern) ->
+pick_i(I, I, _, [#cpg_data_pid{pid = Pid} | _], _, _, Pattern) ->
     {ok, Pattern, Pid};
 
 pick_i(I, Random, Filtered,
-       [#list_pg_data_pid{pid = Exclude} | L],
+       [#cpg_data_pid{pid = Exclude} | L],
        Exclude, GroupName, Pattern) ->
     pick_i(I + 1, Random, Filtered, L, Exclude, GroupName, Pattern);
 
 pick_i(I, Random, Filtered,
-       [#list_pg_data_pid{pid = Pid} | L],
+       [#cpg_data_pid{pid = Pid} | L],
        Exclude, GroupName, Pattern) ->
     pick_i(I + 1, Random, [Pid | Filtered], L, Exclude, GroupName, Pattern).
 

@@ -55,6 +55,8 @@
 %% application callbacks
 -export([start/2, stop/1]).
 
+-include("cpg_constants.hrl").
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from application
 %%%------------------------------------------------------------------------
@@ -65,7 +67,13 @@
 %% @end
 %%-------------------------------------------------------------------------
 start(_, _) ->
-    {ok, ScopeList} = application:get_env(scope),
+    {ok, L} = application:get_env(scope),
+    ScopeList = if
+        L == [] ->
+            [?DEFAULT_SCOPE];
+        is_list(L) ->
+            L
+    end,
     case cpg_sup:start_link(ScopeList) of
         {ok, _} = Success ->
             Success;

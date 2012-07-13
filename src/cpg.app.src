@@ -5,13 +5,15 @@
   [{description, "CloudI Process Groups"},
    {vsn, "1.0.1"},
    {modules, [
+        cpg,
         cpg_app,
-        cpg_list_pg,
-        cpg_list_pg_data,
+        cpg_data,
         cpg_sup,
         trie
         ]},
    {registered,[
+        % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
+        cloudi_process_group,
         % env scope list defines registered pids
         process_group1,
         process_group2

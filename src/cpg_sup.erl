@@ -97,7 +97,7 @@ child_specifications(ChildSpecs, []) ->
 child_specifications(ChildSpecs, [Scope | L]) when is_atom(Scope) ->
     Shutdown = 2000, % milliseconds
     ChildSpec = {Scope,
-                 {cpg_list_pg, start_link, [Scope]},
-                 permanent, Shutdown, worker, [cpg_list_pg]},
+                 {cpg, start_link, [Scope]},
+                 permanent, Shutdown, worker, [cpg]},
     child_specifications([ChildSpec | ChildSpecs], L).
 
