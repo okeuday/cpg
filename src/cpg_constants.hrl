@@ -1,10 +1,12 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+
 % cpg_list_pg constants for changing process group functionality
 
 % only used if the scope application env is an empty list
 -define(DEFAULT_SCOPE, cloudi_process_group).
 
 % use dict if you don't want to be limited to string (list of integer) keys
-% (guards would need to be changed to allow non-strings)
 -define(GROUP_STORAGE, trie). % dict or any dict-interface module
 
 % group name pattern matching, i.e.,

@@ -68,6 +68,7 @@
          code_change/3, terminate/2]).
 
 -include("cpg_data.hrl").
+-include("logging_default.hrl").
 
 -record(state,
     {
@@ -109,8 +110,7 @@ start_link(Scope) when is_atom(Scope) ->
 
 -spec join(name()) -> 'ok' | 'error'.
 
-join(GroupName)
-    when is_list(GroupName) ->
+join(GroupName) ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, self()}) of
         {[_ | _], _} ->
@@ -122,7 +122,7 @@ join(GroupName)
 -spec join(name() | scope(), pid() | name()) -> 'ok' | 'error'.
 
 join(GroupName, Pid)
-    when is_list(GroupName), is_pid(Pid), node(Pid) =:= node() ->
+    when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, Pid}) of
         {[_ | _], _} ->
@@ -132,7 +132,7 @@ join(GroupName, Pid)
     end;
 
 join(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, self()}) of
         {[_ | _], _} ->
@@ -144,7 +144,7 @@ join(Scope, GroupName)
 -spec join(scope(), name(), pid()) -> 'ok' | 'error'.
 
 join(Scope, GroupName, Pid)
-    when is_atom(Scope), is_list(GroupName), is_pid(Pid),
+    when is_atom(Scope), is_pid(Pid),
          node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, Pid}) of
@@ -162,8 +162,7 @@ join(Scope, GroupName, Pid)
 
 -spec leave(name()) -> 'ok' | 'error'.
 
-leave(GroupName)
-    when is_list(GroupName) ->
+leave(GroupName) ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, self()}) of
         {[_ | _], _} ->
@@ -175,7 +174,7 @@ leave(GroupName)
 -spec leave(name() | scope(), pid() | name()) -> 'ok' | 'error'.
 
 leave(GroupName, Pid)
-    when is_list(GroupName), is_pid(Pid), node(Pid) =:= node() ->
+    when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, Pid}) of
         {[_ | _], _} ->
@@ -185,7 +184,7 @@ leave(GroupName, Pid)
     end;
 
 leave(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, self()}) of
         {[_ | _], _} ->
@@ -197,7 +196,7 @@ leave(Scope, GroupName)
 -spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
 
 leave(Scope, GroupName, Pid)
-    when is_atom(Scope), is_list(GroupName), is_pid(Pid),
+    when is_atom(Scope), is_pid(Pid),
          node(Pid) =:= node() ->
     group_name_validate_new(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, Pid}) of
@@ -217,8 +216,7 @@ leave(Scope, GroupName, Pid)
 
 -spec create(name()) -> 'ok' | 'error'.
 
-create(GroupName)
-    when is_list(GroupName) ->
+create(GroupName) ->
     group_name_validate_new(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
@@ -234,7 +232,7 @@ create(GroupName)
 -spec create(scope(), name()) -> 'ok' | 'error'.
 
 create(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     group_name_validate_new(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
@@ -255,8 +253,7 @@ create(Scope, GroupName)
 
 -spec delete(name()) -> 'ok' | 'error'.
 
-delete(GroupName)
-    when is_list(GroupName) ->
+delete(GroupName) ->
     group_name_validate_new(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
@@ -272,7 +269,7 @@ delete(GroupName)
 -spec delete(scope(), name()) -> 'ok' | 'error'.
 
 delete(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     group_name_validate_new(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
@@ -294,7 +291,7 @@ delete(Scope, GroupName)
 -spec join(name(), pid()) -> 'ok' | 'error'.
 
 join(GroupName, Pid)
-    when is_list(GroupName), is_pid(Pid) ->
+    when is_pid(Pid) ->
     group_name_validate_new(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
@@ -310,7 +307,7 @@ join(GroupName, Pid)
 -spec join(scope(), name(), pid()) -> 'ok' | 'error'.
 
 join(Scope, GroupName, Pid)
-    when is_atom(Scope), is_list(GroupName), is_pid(Pid) ->
+    when is_atom(Scope), is_pid(Pid) ->
     group_name_validate_new(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
@@ -332,7 +329,7 @@ join(Scope, GroupName, Pid)
 -spec leave(name(), pid()) -> 'ok' | 'error'.
 
 leave(GroupName, Pid)
-    when is_list(GroupName), is_pid(Pid) ->
+    when is_pid(Pid) ->
     group_name_validate_new(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
@@ -348,7 +345,7 @@ leave(GroupName, Pid)
 -spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
 
 leave(Scope, GroupName, Pid)
-    when is_atom(Scope), is_list(GroupName), is_pid(Pid) ->
+    when is_atom(Scope), is_pid(Pid) ->
     group_name_validate_new(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
@@ -375,24 +372,23 @@ leave(Scope, GroupName, Pid)
 
 -spec get_members(name()) -> get_members_ret().
    
-get_members(GroupName)
-    when is_list(GroupName) ->
+get_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName}).
 
 -spec get_members(name() | scope(), pid() | name()) -> get_members_ret().
    
 get_members(GroupName, Exclude)
-    when is_list(GroupName), is_pid(Exclude) ->
+    when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName, Exclude});
 
 get_members(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     gen_server:call(Scope, {get_members, GroupName}).
 
 -spec get_members(scope(), name(), pid()) -> get_members_ret().
 
 get_members(Scope, GroupName, Exclude)
-    when is_atom(Scope), is_list(GroupName), is_pid(Exclude) ->
+    when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_members, GroupName, Exclude}).
 
 %%-------------------------------------------------------------------------
@@ -403,14 +399,13 @@ get_members(Scope, GroupName, Exclude)
 
 -spec get_local_members(name()) -> get_members_ret().
 
-get_local_members(GroupName)
-    when is_list(GroupName) ->
+get_local_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName}).
 
 -spec get_local_members(scope(), name()) -> get_members_ret().
 
 get_local_members(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     gen_server:call(Scope, {get_local_members, GroupName}).
 
 %%-------------------------------------------------------------------------
@@ -438,26 +433,25 @@ which_groups(Scope)
 
 -spec get_closest_pid(name()) -> pid() | {'error', gcp_error_reason()}.
 
-get_closest_pid(GroupName)
-    when is_list(GroupName) ->
+get_closest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName}).
 
 -spec get_closest_pid(name() | scope(), pid() | name()) ->
     pid() | {'error', gcp_error_reason()}.
 
 get_closest_pid(GroupName, Exclude)
-    when is_list(GroupName), is_pid(Exclude) ->
+    when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName, Exclude});
 
 get_closest_pid(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     gen_server:call(Scope, {get_closest_pid, GroupName}).
 
 -spec get_closest_pid(scope(), name(), pid()) ->
     pid() | {'error', gcp_error_reason()}.
 
 get_closest_pid(Scope, GroupName, Exclude)
-    when is_atom(Scope), is_list(GroupName), is_pid(Exclude) ->
+    when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_closest_pid, GroupName, Exclude}).
 
 %%-------------------------------------------------------------------------
@@ -468,26 +462,25 @@ get_closest_pid(Scope, GroupName, Exclude)
 
 -spec get_random_pid(name()) -> pid() | {'error', gcp_error_reason()}.
 
-get_random_pid(GroupName)
-    when is_list(GroupName) ->
+get_random_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName}).
 
 -spec get_random_pid(name() | scope(), pid() | name()) ->
     pid() | {'error', gcp_error_reason()}.
 
 get_random_pid(GroupName, Exclude)
-    when is_list(GroupName), is_pid(Exclude) ->
+    when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName, Exclude});
 
 get_random_pid(Scope, GroupName)
-    when is_atom(Scope), is_list(GroupName) ->
+    when is_atom(Scope) ->
     gen_server:call(Scope, {get_random_pid, GroupName}).
 
 -spec get_random_pid(scope(), name(), pid()) ->
     pid() | {'error', gcp_error_reason()}.
 
 get_random_pid(Scope, GroupName, Exclude)
-    when is_atom(Scope), is_list(GroupName), is_pid(Exclude) ->
+    when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_random_pid, GroupName, Exclude}).
 
 %%%------------------------------------------------------------------------
@@ -565,14 +558,17 @@ handle_call({get_random_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_random_pid(GroupName, Exclude, Groups), State};
 
-handle_call(_, _, State) ->
-    {stop, {error, invalid_request}, error, State}.
+handle_call(Request, _, State) ->
+    ?LOG_WARN("Unknown call \"~p\"", [Request]),
+    {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
+     error, State}.
 
 -type cast() :: {'exchange', node(), #state{}}.
 
 -spec handle_cast(cast(), #state{}) -> {'noreply', #state{}}.
 
-handle_cast({exchange, _Node, ExternalState}, State) ->
+handle_cast({exchange, Node, ExternalState}, State) ->
+    ?LOG_INFO("received state from ~p", [Node]),
     {noreply, store(ExternalState, State)};
 
 handle_cast(_, State) ->

@@ -85,7 +85,7 @@ get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
 get_empty_groups() ->
     ?GROUP_STORAGE:new().
 
-get_members(GroupName, Groups) when is_list(GroupName) ->
+get_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
@@ -100,7 +100,7 @@ get_members(GroupName, Groups) when is_list(GroupName) ->
     end.
 
 get_members(GroupName, Exclude, Groups)
-    when is_list(GroupName), is_pid(Exclude) ->
+    when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
@@ -125,8 +125,7 @@ get_members(GroupName, Exclude, Groups)
             end
     end.
 
-get_local_members(GroupName, Groups)
-    when is_list(GroupName) ->
+get_local_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
@@ -139,8 +138,7 @@ get_local_members(GroupName, Groups)
 which_groups(Groups) ->
     ?GROUP_STORAGE:fetch_keys(Groups).
 
-get_closest_pid(GroupName, Groups)
-    when is_list(GroupName) ->
+get_closest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
@@ -157,7 +155,7 @@ get_closest_pid(GroupName, Groups)
     end.
 
 get_closest_pid(GroupName, Exclude, Groups)
-    when is_list(GroupName), is_pid(Exclude) ->
+    when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
@@ -176,8 +174,7 @@ get_closest_pid(GroupName, Exclude, Groups)
                  Exclude, GroupName, Pattern)
     end.
 
-get_random_pid(GroupName, Groups)
-    when is_list(GroupName) ->
+get_random_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
@@ -192,7 +189,7 @@ get_random_pid(GroupName, Groups)
     end.
 
 get_random_pid(GroupName, Exclude, Groups)
-    when is_list(GroupName), is_pid(Exclude) ->
+    when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
