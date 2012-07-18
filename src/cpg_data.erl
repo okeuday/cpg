@@ -86,12 +86,30 @@
 get_groups() ->
     gen_server:call(?DEFAULT_SCOPE, cpg_data).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the group storage for a particular scope or after a period of time.===
+%% This provides the internal representation of process groups so that
+%% requests will not be blocked by the single process managing the scope
+%% of the process groups.
+%% @end
+%%-------------------------------------------------------------------------
+
 get_groups(Scope) when is_atom(Scope) ->
     gen_server:call(Scope, cpg_data);
 
 % send the groups as {cpg_data, Groups} after Time milliseconds to self()
 get_groups(Time) when is_integer(Time) ->
     erlang:send_after(Time, ?DEFAULT_SCOPE, {cpg_data, self()}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the group storage for a particular scope after a period of time.===
+%% This provides the internal representation of process groups so that
+%% requests will not be blocked by the single process managing the scope
+%% of the process groups.
+%% @end
+%%-------------------------------------------------------------------------
 
 get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
     erlang:send_after(Time, Scope, {cpg_data, self()}).
@@ -124,6 +142,13 @@ get_members(GroupName, Groups) ->
                 [Pid | L]
             end, [], Remote ++ Local)}
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the members of a specific group while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
 
 get_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -200,6 +225,15 @@ get_closest_pid(GroupName, Groups) ->
             pick(LocalCount, Local, Pattern)
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with local pids given priority while excluding a specific pid.===
+%% Remote pids are selected randomly since the distributed Erlang connections
+%% create a fully connected network.  Usually the self() pid is excluded
+%% with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
 get_closest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
@@ -239,6 +273,13 @@ get_random_pid(GroupName, Groups) ->
                                 remote = Remote}} ->
             pick(LocalCount + RemoteCount, Local ++ Remote, Pattern)
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
 
 get_random_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->

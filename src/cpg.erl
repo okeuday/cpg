@@ -97,7 +97,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start process groups storage in a given scope.===
+%% ===Start process groups storage for the default scope.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -105,6 +105,12 @@
 
 start_link() ->
     start_link(?DEFAULT_SCOPE).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start process groups storage for a specific scope.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec start_link(atom()) -> {'ok', pid()} | {'error', term()}.
 
@@ -118,10 +124,8 @@ start_link(Scope) when is_atom(Scope) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Join a specific group with a local pid.===
-%% The local pid must have a one-to-one relationship with self() to justify
-%% not using a distributed transaction.  A group is automatically created
-%% if it does not already exist.
+%% ===Join a specific group with self() as a local pid.===
+%% A group is automatically created if it does not already exist.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -136,6 +140,15 @@ join(GroupName) ->
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join a specific group with the specified local pid or self() in a specified scope.===
+%% The local pid must have a one-to-one relationship with self() to justify
+%% not using a distributed transaction.  A group is automatically created
+%% if it does not already exist.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec join(name() | scope(), pid() | name()) -> 'ok' | 'error'.
 
 join(GroupName, Pid)
@@ -148,6 +161,13 @@ join(GroupName, Pid)
             error
     end;
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join a specific group within a specific scope with self() as a local pid.===
+%% A group is automatically created if it does not already exist.
+%% @end
+%%-------------------------------------------------------------------------
+
 join(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate_new(GroupName),
@@ -157,6 +177,15 @@ join(Scope, GroupName)
         _ ->
             error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join a specific group with the specified local pid in a specified scope.===
+%% The local pid must have a one-to-one relationship with self() to justify
+%% not using a distributed transaction.  A group is automatically created
+%% if it does not already exist.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec join(scope(), name(), pid()) -> 'ok' | 'error'.
 
@@ -519,6 +548,10 @@ get_random_pid(Scope, GroupName, Exclude)
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
+%% @private
+%% @doc
+%% @end
+
 -spec init([scope()]) -> {'ok', #state{}}.
 
 init([Scope]) ->
@@ -536,6 +569,10 @@ init([Scope]) ->
       B3:16/unsigned-integer>> = crypto:rand_bytes(6),
     random:seed(B1, B2, B3),
     {ok, #state{scope = Scope}}.
+
+%% @private
+%% @doc
+%% @end
 
 -type call() :: {'create', name()}
               | {'delete', name()}
@@ -598,6 +635,10 @@ handle_call(Request, _, State) ->
     {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
      error, State}.
 
+%% @private
+%% @doc
+%% @end
+
 -type cast() :: {'exchange', node(), #state{}}.
 
 -spec handle_cast(cast(), #state{}) -> {'noreply', #state{}}.
@@ -608,6 +649,10 @@ handle_cast({exchange, Node, ExternalState}, State) ->
 
 handle_cast(_, State) ->
     {noreply, State}.
+
+%% @private
+%% @doc
+%% @end
 
 -spec handle_info(tuple(), #state{}) -> {'noreply', #state{}}.
 
@@ -632,10 +677,18 @@ handle_info({cpg_data, From},
 handle_info(_, State) ->
     {noreply, State}.
 
+%% @private
+%% @doc
+%% @end
+
 -spec terminate(term(), #state{}) -> 'ok'.
 
 terminate(_, _) ->
     ok.
+
+%% @private
+%% @doc
+%% @end
 
 code_change(_, State, _) ->
     {ok, State}.

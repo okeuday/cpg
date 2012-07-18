@@ -77,6 +77,10 @@ start_link([A | _] = ScopeList) when is_atom(A) ->
 %%% Callback functions from supervisor
 %%%------------------------------------------------------------------------
 
+%% @private
+%% @doc
+%% @end
+
 init([ScopeList]) ->
     MaxRestarts = 5,
     MaxTime = 60, % seconds (1 minute)
