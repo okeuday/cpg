@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==cpg Application Supervisor==
+%%% ==CPG Application Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -64,13 +64,13 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start the cpg application supervisor.===
+%% ===Start the CPG application supervisor.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec start_link(ScopeList :: list(atom())) -> {'ok', pid()} | {'error', any()}.
 
-start_link(ScopeList) when is_list(ScopeList) ->
+start_link([A | _] = ScopeList) when is_atom(A) ->
     supervisor:start_link(?MODULE, [ScopeList]).
 
 %%%------------------------------------------------------------------------
@@ -88,7 +88,7 @@ init([ScopeList]) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-child_specifications(ScopeList) when is_list(ScopeList) ->
+child_specifications([_ | _] = ScopeList) ->
     child_specifications([], ScopeList).
 
 child_specifications(ChildSpecs, []) ->

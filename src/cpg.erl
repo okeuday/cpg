@@ -1,29 +1,41 @@
 %%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 %%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
-%% Derived from the pg2 module in the OTP kernel application
-%% (lib/kernel-x.x.x/src/pg2.erl)
-%% the pg2 module copyright is below:
-%%
-%% Copyright (c) 2011-2012 Michael Truog. All Rights Reserved.
-%%
-%% %CopyrightBegin%
-%%
-%% Copyright Ericsson AB 1997-2010. All Rights Reserved.
-%%
-%% The contents of this file are subject to the Erlang Public License,
-%% Version 1.1, (the "License"); you may not use this file except in
-%% compliance with the License. You should have received a copy of the
-%% Erlang Public License along with this software. If not, it can be
-%% retrieved online at http://www.erlang.org/.
-%%
-%% Software distributed under the License is distributed on an "AS IS"
-%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
-%% the License for the specific language governing rights and limitations
-%% under the License.
-%%
-%% %CopyrightEnd%
-%%
+%%%
+%%%------------------------------------------------------------------------
+%%% @doc
+%%% ==CloudI Process Groups (CPG)==
+%%% @end
+%%%
+%%% Derived from the pg2 module in the OTP kernel application
+%%% (lib/kernel-x.x.x/src/pg2.erl)
+%%% the pg2 module copyright is below:
+%%%
+%%% Copyright (c) 2011-2012 Michael Truog. All Rights Reserved.
+%%%
+%%% %CopyrightBegin%
+%%%
+%%% Copyright Ericsson AB 1997-2010. All Rights Reserved.
+%%%
+%%% The contents of this file are subject to the Erlang Public License,
+%%% Version 1.1, (the "License"); you may not use this file except in
+%%% compliance with the License. You should have received a copy of the
+%%% Erlang Public License along with this software. If not, it can be
+%%% retrieved online at http://www.erlang.org/.
+%%%
+%%% Software distributed under the License is distributed on an "AS IS"
+%%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+%%% the License for the specific language governing rights and limitations
+%%% under the License.
+%%%
+%%% %CopyrightEnd%
+%%%
+%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 1.0.1 {@date} {@time}
+%%%------------------------------------------------------------------------
+
 -module(cpg).
+-author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
 
@@ -64,11 +76,13 @@
          get_random_pid/2,
          get_random_pid/3]).
 
+%% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          code_change/3, terminate/2]).
 
 -include("cpg_data.hrl").
 -include("logging_default.hrl").
+%-include_lib("$LOGGING_APPLICATION/src/logging_default.hrl").
 
 -record(state,
     {
@@ -83,7 +97,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Start process groups storage in a given scope.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -104,7 +118,10 @@ start_link(Scope) when is_atom(Scope) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Join a specific group with a local pid.===
+%% The local pid must have a one-to-one relationship with self() to justify
+%% not using a distributed transaction.  A group is automatically created
+%% if it does not already exist.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -156,7 +173,8 @@ join(Scope, GroupName, Pid)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Leave a specific group with a local pid.===
+%% The group is automatically removed if it becomes empty.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -210,7 +228,10 @@ leave(Scope, GroupName, Pid)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Create a group explicitly.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -247,7 +268,10 @@ create(Scope, GroupName)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Delete a group explicitly.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -284,7 +308,10 @@ delete(Scope, GroupName)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Join a specific group.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -322,7 +349,10 @@ join(Scope, GroupName, Pid)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Leave a specific group.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -366,7 +396,7 @@ leave(Scope, GroupName, Pid)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Get the members of a specific group.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -393,7 +423,7 @@ get_members(Scope, GroupName, Exclude)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Get only the local members of a specific group.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -410,7 +440,7 @@ get_local_members(Scope, GroupName)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Get all the groups currently defined.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -427,7 +457,9 @@ which_groups(Scope)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Get a group member, with local pids given priority.===
+%% Remote pids are selected randomly since the distributed Erlang connections
+%% create a fully connected network.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -456,7 +488,7 @@ get_closest_pid(Scope, GroupName, Exclude)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Text.===
+%% ===Get a group member.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -499,6 +531,10 @@ init([Scope]) ->
                           % has restarted and wants previous state
                           %self() ! {nodeup, N} % pg2 does this
                   end, Ns),
+    <<B1:16/unsigned-integer,
+      B2:16/unsigned-integer,
+      B3:16/unsigned-integer>> = crypto:rand_bytes(6),
+    random:seed(B1, B2, B3),
     {ok, #state{scope = Scope}}.
 
 -type call() :: {'create', name()}
@@ -506,8 +542,7 @@ init([Scope]) ->
               | {'join', name(), pid()}
               | {'leave', name(), pid()}.
 
--spec handle_call(call(), _, #state{}) -> 
-        {'reply', 'ok', #state{}}.
+-spec handle_call(call(), _, #state{}) -> {'reply', 'ok', #state{}}.
 
 handle_call({create, GroupName}, _, State) ->
     {reply, ok, create_group(GroupName, State)};

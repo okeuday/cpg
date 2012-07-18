@@ -3,10 +3,11 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==list_pg Groups Handling.==
-%%% Method of using list_pg instead of pg2.  The resulting process group
+%%% ==CPG Groups Handling.==
+%%% Method of using cpg instead of pg2.  The resulting process group
 %%% handling is more scalable and more efficient.  However, usage is limited
-%%% to string (list of integers) group names.
+%%% to string (list of integers) group names (unless the GROUP_STORAGE macro
+%%% is changed and pattern matching is disabled).
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -69,6 +70,19 @@
 -include("cpg_data.hrl").
 -include("cpg_constants.hrl").
 
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the group storage.===
+%% This provides the internal representation of process groups so that
+%% requests will not be blocked by the single process managing the scope
+%% of the process groups.
+%% @end
+%%-------------------------------------------------------------------------
+
 get_groups() ->
     gen_server:call(?DEFAULT_SCOPE, cpg_data).
 
@@ -82,8 +96,20 @@ get_groups(Time) when is_integer(Time) ->
 get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
     erlang:send_after(Time, Scope, {cpg_data, self()}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get empty group storage.===
+%% @end
+%%-------------------------------------------------------------------------
+
 get_empty_groups() ->
     ?GROUP_STORAGE:new().
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the members of a specific group.===
+%% @end
+%%-------------------------------------------------------------------------
 
 get_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
@@ -125,6 +151,12 @@ get_members(GroupName, Exclude, Groups)
             end
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the local members of a specific group.===
+%% @end
+%%-------------------------------------------------------------------------
+
 get_local_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -135,8 +167,22 @@ get_local_members(GroupName, Groups) ->
             end, [], Local)}
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get all the groups currently defined.===
+%% @end
+%%-------------------------------------------------------------------------
+
 which_groups(Groups) ->
     ?GROUP_STORAGE:fetch_keys(Groups).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with local pids given priority.===
+%% Remote pids are selected randomly since the distributed Erlang connections
+%% create a fully connected network.
+%% @end
+%%-------------------------------------------------------------------------
 
 get_closest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
@@ -173,6 +219,12 @@ get_closest_pid(GroupName, Exclude, Groups)
             pick(LocalCount, Local, RemoteCount, Remote,
                  Exclude, GroupName, Pattern)
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member.===
+%% @end
+%%-------------------------------------------------------------------------
 
 get_random_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
