@@ -7,7 +7,10 @@
 %%% Method of using cpg instead of pg2.  The resulting process group
 %%% handling is more scalable and more efficient.  However, usage is limited
 %%% to string (list of integers) group names (unless the GROUP_STORAGE macro
-%%% is changed and pattern matching is disabled).
+%%% is changed and pattern matching is disabled).  The groups state is
+%%% obtained from the cpg process for a specific scope and is then used with
+%%% the functions provided here, so that contention for the cpg process
+%%% can be avoided.
 %%% @end
 %%%
 %%% BSD LICENSE

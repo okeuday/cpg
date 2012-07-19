@@ -4,11 +4,10 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Process Groups (CPG)==
+%%% Based on the pg2 module in the Erlang OTP kernel application
+%%% (lib/kernel-x.x.x/src/pg2.erl).
 %%% @end
-%%%
-%%% Derived from the pg2 module in the OTP kernel application
-%%% (lib/kernel-x.x.x/src/pg2.erl)
-%%% the pg2 module copyright is below:
+%%% The pg2 module copyright is below:
 %%%
 %%% Copyright (c) 2011-2012 Michael Truog. All Rights Reserved.
 %%%
@@ -41,6 +40,7 @@
 
 -include("cpg_constants.hrl").
 
+%% external interface
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 % does not require global locking
 -export([join/1,
@@ -81,8 +81,7 @@
          code_change/3, terminate/2]).
 
 -include("cpg_data.hrl").
--include("logging_default.hrl").
-%-include_lib("$LOGGING_APPLICATION/src/logging_default.hrl").
+-include("logging.hrl").
 
 -record(state,
     {
@@ -142,7 +141,7 @@ join(GroupName) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Join a specific group with the specified local pid or self() in a specified scope.===
+%% ===Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.===
 %% The local pid must have a one-to-one relationship with self() to justify
 %% not using a distributed transaction.  A group is automatically created
 %% if it does not already exist.
@@ -161,13 +160,6 @@ join(GroupName, Pid)
             error
     end;
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Join a specific group within a specific scope with self() as a local pid.===
-%% A group is automatically created if it does not already exist.
-%% @end
-%%-------------------------------------------------------------------------
-
 join(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate_new(GroupName),
@@ -180,7 +172,7 @@ join(Scope, GroupName)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Join a specific group with the specified local pid in a specified scope.===
+%% ===Join a specific group within a specific scope with a local pid.===
 %% The local pid must have a one-to-one relationship with self() to justify
 %% not using a distributed transaction.  A group is automatically created
 %% if it does not already exist.
@@ -218,6 +210,15 @@ leave(GroupName) ->
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.===
+%% The local pid must have a one-to-one relationship with self() to justify
+%% not using a distributed transaction.  The group will automatically be
+%% removed if it becomes empty.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec leave(name() | scope(), pid() | name()) -> 'ok' | 'error'.
 
 leave(GroupName, Pid)
@@ -239,6 +240,15 @@ leave(Scope, GroupName)
         _ ->
             error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave a specific group within a specific scope with a local pid.===
+%% The local pid must have a one-to-one relationship with self() to justify
+%% not using a distributed transaction.  The group will automatically be
+%% removed if it becomes empty.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
 
@@ -279,6 +289,15 @@ create(GroupName) ->
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a group explicitly in a specific scope.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec create(scope(), name()) -> 'ok' | 'error'.
 
 create(Scope, GroupName)
@@ -318,6 +337,15 @@ delete(GroupName) ->
         _ ->
             error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Delete a group explicitly in a specific scope.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec delete(scope(), name()) -> 'ok' | 'error'.
 
@@ -360,6 +388,15 @@ join(GroupName, Pid)
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join a specific group in a specific scope.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec join(scope(), name(), pid()) -> 'ok' | 'error'.
 
 join(Scope, GroupName, Pid)
@@ -401,6 +438,15 @@ leave(GroupName, Pid)
             error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave a specific group in a specific scope.===
+%% The pid does not need to be a local pid with a one-to-one relationship
+%% with self() (this function uses a distributed transaction to enforce
+%% consistency).
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
 
 leave(Scope, GroupName, Pid)
@@ -434,6 +480,13 @@ leave(Scope, GroupName, Pid)
 get_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the members of a specific group while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_members(name() | scope(), pid() | name()) -> get_members_ret().
    
 get_members(GroupName, Exclude)
@@ -443,6 +496,13 @@ get_members(GroupName, Exclude)
 get_members(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope, {get_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the members of a specific group within a specific scope while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec get_members(scope(), name(), pid()) -> get_members_ret().
 
@@ -461,6 +521,12 @@ get_members(Scope, GroupName, Exclude)
 get_local_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the local members of a specific group within a specific scope.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_local_members(scope(), name()) -> get_members_ret().
 
 get_local_members(Scope, GroupName)
@@ -477,6 +543,12 @@ get_local_members(Scope, GroupName)
 
 which_groups() ->
     gen_server:call(?DEFAULT_SCOPE, which_groups).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get all the groups currently defined within a specific scope.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec which_groups(scope()) -> [name()].
 
@@ -497,6 +569,15 @@ which_groups(Scope)
 get_closest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.===
+%% Remote pids are selected randomly since the distributed Erlang connections
+%% create a fully connected network.  Usually the self() pid is excluded
+%% with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_closest_pid(name() | scope(), pid() | name()) ->
     pid() | {'error', gcp_error_reason()}.
 
@@ -507,6 +588,15 @@ get_closest_pid(GroupName, Exclude)
 get_closest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope, {get_closest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member within a specific scope, with local pids given priority while excluding a specific pid.===
+%% Remote pids are selected randomly since the distributed Erlang connections
+%% create a fully connected network.  Usually the self() pid is excluded
+%% with this function call.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec get_closest_pid(scope(), name(), pid()) ->
     pid() | {'error', gcp_error_reason()}.
@@ -529,6 +619,13 @@ get_random_pid(GroupName) ->
 -spec get_random_pid(name() | scope(), pid() | name()) ->
     pid() | {'error', gcp_error_reason()}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
 get_random_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName, Exclude});
@@ -536,6 +633,13 @@ get_random_pid(GroupName, Exclude)
 get_random_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope, {get_random_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member within a specific scope while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec get_random_pid(scope(), name(), pid()) ->
     pid() | {'error', gcp_error_reason()}.
