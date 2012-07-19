@@ -29,5 +29,5 @@ Michael Truog (mjtruog [at] gmail (dot) com)
 License
 -------
 
-BSD (cpg.erl is under the Erlang Public License)
+BSD (src/cpg.erl is under the Erlang Public License)
 
