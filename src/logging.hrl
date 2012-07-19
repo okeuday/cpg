@@ -4,5 +4,5 @@
 % include the proper logging macros
 
 -include("logging_default.hrl").
-%-include("cloudi_logger.hrl").
+%-include_lib("cloudi/include/cloudi_logger.hrl").
 
