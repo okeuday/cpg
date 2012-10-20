@@ -8,17 +8,17 @@
         cpg,
         cpg_app,
         cpg_data,
-        cpg_sup,
-        trie
+        cpg_sup
         ]},
    {registered,[
         % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
         cloudi_process_group,
-        % env scope list defines registered pids
+        % env scope list defines locally registered pids
         process_group1,
         process_group2
         ]},
    {applications, [
+        trie,
         stdlib,
         kernel
         ]},

@@ -45,22 +45,34 @@ So, that means these process group solutions are only targeting a cluster
 of Erlang nodes, given the constraints of distributed Erlang and a
 fully-connected network topology.
 
+Build
+-----
+
+    rebar get-deps
+    rebar compile
+
 Example
 -------
 
-    (cpg@localhost)1> application:start(cpg).
+    $ erl -sname cpg@localhost -pz deps/trie/ebin/ -pz ebin/
+    Erlang R15B02 (erts-5.9.2) [source] [64-bit] [smp:8:8] [async-threads:0] [kernel-poll:false]
+    
+    Eshell V5.9.2  (abort with ^G)
+    (cpg@localhost)1> application:start(trie).
     ok
-    (cpg@localhost)2> cpg:join(process_group1, "Hello", self()).      
+    (cpg@localhost)2> application:start(cpg).
     ok
-    (cpg@localhost)3> cpg:join(process_group1, "World", self()).
+    (cpg@localhost)3> cpg:join(process_group1, "Hello", self()).      
     ok
-    (cpg@localhost)4> cpg:get_local_members(process_group1, "Hello"). 
+    (cpg@localhost)4> cpg:join(process_group1, "World", self()).
+    ok
+    (cpg@localhost)5> cpg:get_local_members(process_group1, "Hello"). 
     {ok,"Hello",[<0.43.0>]}
-    (cpg@localhost)5> cpg:get_local_members(process_group1, "World").
+    (cpg@localhost)6> cpg:get_local_members(process_group1, "World").
     {ok,"World",[<0.43.0>]}
-    (cpg@localhost)6> cpg:which_groups(process_group1).              
+    (cpg@localhost)7> cpg:which_groups(process_group1).              
     ["Hello","World"]
-    (cpg@localhost)7> cpg:which_groups(process_group2).
+    (cpg@localhost)8> cpg:which_groups(process_group2).
     []
     
 Author
