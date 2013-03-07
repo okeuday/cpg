@@ -4,7 +4,7 @@
 % CPG constants for changing process group functionality
 
 % only used if the scope application env is an empty list
--define(DEFAULT_SCOPE, cloudi_process_group).
+-define(DEFAULT_SCOPE, cpg_default_scope).
 
 % use dict if you don't want to be limited to string (list of integer) keys
 -define(GROUP_STORAGE, trie). % dict or any dict-interface module

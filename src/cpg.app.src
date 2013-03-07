@@ -12,10 +12,10 @@
         ]},
    {registered,[
         % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
-        cloudi_process_group,
+        cpg_default_scope,
         % env scope list defines locally registered pids
-        process_group1,
-        process_group2
+        groups_scope1,
+        groups_scope2
         ]},
    {applications, [
         quickrand,
@@ -27,8 +27,10 @@
    {start_phases, []},
    {env, [
         {scope, [
-            process_group1,
-            process_group2
+            % automatically created scopes to keep process groups separate
+            % (each becomes a locally registered name)
+            groups_scope1,
+            groups_scope2
             ]}
         ]}]}.
 
