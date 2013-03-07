@@ -86,10 +86,10 @@ as an atom which is used to locally register a cpg Erlang process using
 `start_link/1`.  For a given cpg scope, any Erlang process can join or leave
 a group.  The group name is a string (list of integers) due to usage of the trie
 data structure, but that can be changed within the `cpg_constants.hrl` file.
-If the scope is not specified, the default scope is used: `"cpg_default_scope"`.
+If the scope is not specified, the default scope is used: `cpg_default_scope`.
 
 In the example, the process group "Hello" is created within the `groups_scope1`
-scope and the process group "World" is created within the `groups_scope2` scope.
+scope and the process group "World" is created within the `groups_scope1` scope.
 Within both progress groups, a single Erlang process is added once.  If more
 scopes were required, they could be created automatically by being provided
 within the cpg application scope list.
