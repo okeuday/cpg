@@ -88,11 +88,17 @@ a group.  The group name is a string (list of integers) due to usage of the trie
 data structure, but that can be changed within the `cpg_constants.hrl` file.
 If the scope is not specified, the default scope is used: `cpg_default_scope`.
 
-In the example, the process group "Hello" is created within the `groups_scope1`
-scope and the process group "World" is created within the `groups_scope1` scope.
-Within both progress groups, a single Erlang process is added once.  If more
-scopes were required, they could be created automatically by being provided
-within the cpg application scope list.
+In the example, both the process group "Hello" and the process group "World"
+are created within the `groups_scope1` scope.  Within both progress groups,
+a single Erlang process is added once.  If more scopes were required, they
+could be created automatically by being provided within the cpg application
+scope list.  There is no restriction on the number of process groups that
+can be created within a scope, and there is nothing limiting the number
+of Erlang processes that can be added to a single group.  A single Erlang
+process can be added to a single process group in a single scope multiple times
+to change the probability of returning a particular Erlang process, when
+only a single process is requested from the cpg interface (e.g., from
+the `get_closest_pid` function).
     
 Author
 ------
