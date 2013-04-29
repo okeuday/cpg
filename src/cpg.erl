@@ -69,6 +69,7 @@
          start_link/1,
          whereis_name/1,
          register_name/2,
+         unregister_name/1,
          get_members/1,
          get_members/2,
          get_members/3,
@@ -499,14 +500,14 @@ leave(Scope, GroupName, Pid)
 
 whereis_name({Scope, GroupName})
     when is_atom(Scope) ->
-    case get_random_pid(Scope, GroupName, self()) of
+    case get_random_pid(Scope, GroupName) of
         {error, _} ->
             undefined;
         {ok, _, Pid} ->
             Pid
     end;
 whereis_name(GroupName) ->
-    case get_random_pid(?DEFAULT_SCOPE, GroupName, self()) of
+    case get_random_pid(?DEFAULT_SCOPE, GroupName) of
         {error, _} ->
             undefined;
         {ok, _, Pid} ->
@@ -537,6 +538,21 @@ register_name(GroupName, Pid) ->
         error ->
             no
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function to provide via process registration functionality.===
+%% Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+%% process registration (instead of {local, atom()} or {global, atom()})
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec unregister_name(via_name()) -> 'ok' | 'error'.
+
+unregister_name({Scope, GroupName}) ->
+    leave(Scope, GroupName, self());
+unregister_name(GroupName) ->
+    leave(?DEFAULT_SCOPE, GroupName, self()).
 
 -type get_members_ret() ::
     {ok, name(), list(pid())} | {'error', {'no_such_group', name()}}.
