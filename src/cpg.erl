@@ -117,7 +117,12 @@
 
 -type scope() :: atom().
 -type name() :: any(). % GROUP_STORAGE macro controls this
--type via_name() :: {scope(), name()} | name(). % for OTP behaviors
+-type via_name() :: {'local', scope(), name()} |
+                    {'global', scope(), name()} |
+                    {'local', name()} |
+                    {'global', name()} |
+                    {scope(), name()} |
+                    name(). % for OTP behaviors
 -export_type([scope/0, name/0, via_name/0]).
 
 %%%------------------------------------------------------------------------
@@ -144,6 +149,8 @@ start_link() ->
 -spec start_link(atom()) -> {'ok', pid()} | {'error', term()}.
 
 start_link(Scope) when is_atom(Scope) ->
+    true = (Scope /= local andalso
+            Scope /= global),
     gen_server:start_link({local, Scope}, ?MODULE, [Scope], []).
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
@@ -548,7 +555,15 @@ leave(Scope, GroupName, Pid)
 
 -spec whereis_name(via_name()) -> pid() | 'undefined'.
 
-whereis_name({Scope, GroupName})
+whereis_name({local, Scope, GroupName})
+    when is_atom(Scope) ->
+    case get_local_pid(Scope, GroupName) of
+        {error, _} ->
+            undefined;
+        {ok, _, Pid} ->
+            Pid
+    end;
+whereis_name({global, Scope, GroupName})
     when is_atom(Scope) ->
     case get_random_pid(Scope, GroupName) of
         {error, _} ->
@@ -556,7 +571,31 @@ whereis_name({Scope, GroupName})
         {ok, _, Pid} ->
             Pid
     end;
+whereis_name({local, GroupName}) ->
+    case get_local_pid(?DEFAULT_SCOPE, GroupName) of
+        {error, _} ->
+            undefined;
+        {ok, _, Pid} ->
+            Pid
+    end;
+whereis_name({global, GroupName}) ->
+    case get_random_pid(?DEFAULT_SCOPE, GroupName) of
+        {error, _} ->
+            undefined;
+        {ok, _, Pid} ->
+            Pid
+    end;
+whereis_name({Scope, GroupName})
+    when is_atom(Scope) ->
+    % default is global
+    case get_random_pid(Scope, GroupName) of
+        {error, _} ->
+            undefined;
+        {ok, _, Pid} ->
+            Pid
+    end;
 whereis_name(GroupName) ->
+    % default is global
     case get_random_pid(?DEFAULT_SCOPE, GroupName) of
         {error, _} ->
             undefined;
@@ -574,6 +613,24 @@ whereis_name(GroupName) ->
 
 -spec register_name(via_name(), pid()) -> 'yes' | 'no'.
 
+register_name({RegistrationType, Scope, GroupName}, Pid)
+    when RegistrationType =:= local;
+         RegistrationType =:= global ->
+    case join(Scope, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
+register_name({RegistrationType, GroupName}, Pid)
+    when RegistrationType =:= local;
+         RegistrationType =:= global ->
+    case join(?DEFAULT_SCOPE, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
 register_name({Scope, GroupName}, Pid) ->
     case join(Scope, GroupName, Pid) of
         ok ->
@@ -599,6 +656,14 @@ register_name(GroupName, Pid) ->
 
 -spec unregister_name(via_name()) -> 'ok' | 'error'.
 
+unregister_name({RegistrationType, Scope, GroupName})
+    when RegistrationType =:= local;
+         RegistrationType =:= global ->
+    leave(Scope, GroupName, self());
+unregister_name({RegistrationType, GroupName})
+    when RegistrationType =:= local;
+         RegistrationType =:= global ->
+    leave(?DEFAULT_SCOPE, GroupName, self());
 unregister_name({Scope, GroupName}) ->
     leave(Scope, GroupName, self());
 unregister_name(GroupName) ->
