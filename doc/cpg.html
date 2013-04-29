@@ -16,7 +16,7 @@
    (lib/kernel-x.x.x/src/pg2.erl).
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.0 Feb 18 2013 21:23:18
+<p><b>Version:</b> 1.2.2 Apr 29 2013 11:46:38
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -37,16 +37,20 @@
 
 
 <h3 class="typedecl"><a name="type-get_members_ret">get_members_ret()</a></h3>
-<p><tt>get_members_ret() = [pid()] | {error, {no_such_group, <a href="#type-name">name()</a>}}</tt></p>
+<p><tt>get_members_ret() = {ok, <a href="#type-name">name()</a>, [pid()]} | {error, {no_such_group, <a href="#type-name">name()</a>}}</tt></p>
 
 
 <h3 class="typedecl"><a name="type-name">name()</a></h3>
-<p><tt>name() = string()</tt></p>
-
+<p><tt>name() = any()</tt></p>
+<p> GROUP_STORAGE macro controls this</p>
 
 <h3 class="typedecl"><a name="type-scope">scope()</a></h3>
 <p><tt>scope() = atom()</tt></p>
 
+
+<h3 class="typedecl"><a name="type-via_name">via_name()</a></h3>
+<p><tt>via_name() = {<a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>} | <a href="#type-name">name()</a></tt></p>
+<p> for OTP behaviors</p>
 
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#create-1">create/1</a></td><td>
@@ -175,10 +179,18 @@
   The pid does not need to be a local pid with a one-to-one relationship
   with self() (this function uses a distributed transaction to enforce
   consistency).</td></tr>
+<tr><td valign="top"><a href="#register_name-2">register_name/2</a></td><td>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
 <tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>
   <h4><a name="Start_process_groups_storage_for_the_default_scope.">Start process groups storage for the default scope.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>
   <h4><a name="Start_process_groups_storage_for_a_specific_scope.">Start process groups storage for a specific scope.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#whereis_name-1">whereis_name/1</a></td><td>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
 <tr><td valign="top"><a href="#which_groups-0">which_groups/0</a></td><td>
   <h4><a name="Get_all_the_groups_currently_defined.">Get all the groups currently defined.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#which_groups-1">which_groups/1</a></td><td>
@@ -225,42 +237,42 @@
 
 <h3 class="function"><a name="get_closest_pid-1">get_closest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_closest_pid-3">get_closest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-1">get_furthest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority.">Get a group member, with remote pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_furthest_pid-2">get_furthest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-3">get_furthest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -288,21 +300,21 @@
 
 <h3 class="function"><a name="get_local_pid-1">get_local_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-3">get_local_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -330,21 +342,21 @@
 
 <h3 class="function"><a name="get_random_pid-1">get_random_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member.">Get a group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_random_pid-3">get_random_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -372,21 +384,21 @@
 
 <h3 class="function"><a name="get_remote_pid-1">get_remote_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-3">get_remote_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -477,6 +489,14 @@
   with self() (this function uses a distributed transaction to enforce
   consistency).</p>
 
+<h3 class="function"><a name="register_name-2">register_name/2</a></h3>
+<div class="spec">
+<p><tt>register_name(GroupName::<a href="#type-via_name">via_name()</a>, Pid::pid()) -&gt; yes | no</tt><br></p>
+</div><p>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()})</p>
+
 <h3 class="function"><a name="start_link-0">start_link/0</a></h3>
 <div class="spec">
 <p><tt>start_link() -&gt; {ok, pid()} | {error, term()}</tt><br></p>
@@ -490,6 +510,14 @@
 </div><p>
   <h4><a name="Start_process_groups_storage_for_a_specific_scope.">Start process groups storage for a specific scope.</a></h4>
 </p>
+
+<h3 class="function"><a name="whereis_name-1">whereis_name/1</a></h3>
+<div class="spec">
+<p><tt>whereis_name(GroupName::<a href="#type-via_name">via_name()</a>) -&gt; pid() | undefined</tt><br></p>
+</div><p>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()})</p>
 
 <h3 class="function"><a name="which_groups-0">which_groups/0</a></h3>
 <div class="spec">
@@ -507,6 +535,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Feb 18 2013, 21:23:18.</i></p>
+<p><i>Generated by EDoc, Apr 29 2013, 11:46:38.</i></p>
 </body>
 </html>
