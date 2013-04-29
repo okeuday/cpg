@@ -7,6 +7,7 @@
 -define(DEFAULT_SCOPE, cpg_default_scope).
 
 % use dict if you don't want to be limited to string (list of integer) keys
+% (if not using trie, don't define GROUP_NAME_PATTERN_MATCHING)
 -define(GROUP_STORAGE, trie). % dict or any dict-interface module
 
 % group name pattern matching, i.e.,

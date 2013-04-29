@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CPG Application==
+%%% ==CPG Test Server==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,49 +43,81 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012 Michael Truog
-%%% @version 1.0.1 {@date} {@time}
+%%% @copyright 2013 Michael Truog
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_app).
+-module(cpg_test_server).
+
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(application).
+-behaviour(gen_server).
 
-%% application callbacks
--export([start/2, stop/1]).
+%% external interface
+-export([start_link/1,
+         put/2,
+         get/1]).
 
--include("cpg_constants.hrl").
+%% gen_server callbacks
+-export([init/1,
+         handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
+
+-record(state,
+    {
+        value
+    }).
 
 %%%------------------------------------------------------------------------
-%%% Callback functions from application
+%%% External interface functions
 %%%------------------------------------------------------------------------
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start the CPG application.===
+%% ===Start the test server with a cpg via_name().===
 %% @end
 %%-------------------------------------------------------------------------
-start(_, _) ->
-    {ok, L} = application:get_env(scope),
-    ScopeList = if
-        L == [] ->
-            [?DEFAULT_SCOPE];
-        is_list(L) ->
-            [?DEFAULT_SCOPE | L]
-    end,
-    case cpg_sup:start_link(ScopeList) of
-        {ok, _} = Success ->
-            Success;
-        {error, _} = Error ->
-            Error
-    end.
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Stop the CPG application.===
-%% @end
-%%-------------------------------------------------------------------------
-stop(_) ->
+-spec start_link(cpg:via_name()) -> {'ok', pid()} | {'error', any()}.
+
+start_link(ViaName) ->
+    gen_server:start_link({via, cpg, ViaName}, ?MODULE, [], []).
+
+put(ViaName, Value) ->
+    gen_server:call({via, cpg, ViaName}, {put, Value}).
+
+get(ViaName) ->
+    gen_server:call({via, cpg, ViaName}, get).
+
+%%%------------------------------------------------------------------------
+%%% Callback functions from gen_server
+%%%------------------------------------------------------------------------
+
+init([]) ->
+    {ok, #state{}}.
+
+handle_call({put, Value}, _, State) ->
+    {reply, ok, State#state{value = Value}};
+
+handle_call(get, _, #state{value = Value} = State) ->
+    {reply, Value, State};
+
+handle_call(_, _, State) ->
+    {stop, unknown_call, error, State}.
+
+handle_cast(_, State) ->
+    {stop, unknown_cast, State}.
+
+handle_info(_, State) ->
+    {stop, unknown_info, State}.
+
+terminate(_, _) ->
     ok.
+
+code_change(_, State, _) ->
+    {ok, State}.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 

@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CPG Application==
+%%% ==CPG Tests==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,49 +43,27 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012 Michael Truog
-%%% @version 1.0.1 {@date} {@time}
+%%% @copyright 2013 Michael Truog
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_app).
+-module(cpg_test).
+
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(application).
+-include_lib("eunit/include/eunit.hrl").
 
-%% application callbacks
--export([start/2, stop/1]).
+cpg_start_test() ->
+    ok = reltool_util:application_start(cpg).
 
--include("cpg_constants.hrl").
-
-%%%------------------------------------------------------------------------
-%%% Callback functions from application
-%%%------------------------------------------------------------------------
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Start the CPG application.===
-%% @end
-%%-------------------------------------------------------------------------
-start(_, _) ->
-    {ok, L} = application:get_env(scope),
-    ScopeList = if
-        L == [] ->
-            [?DEFAULT_SCOPE];
-        is_list(L) ->
-            [?DEFAULT_SCOPE | L]
-    end,
-    case cpg_sup:start_link(ScopeList) of
-        {ok, _} = Success ->
-            Success;
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Stop the CPG application.===
-%% @end
-%%-------------------------------------------------------------------------
-stop(_) ->
+via1_test() ->
+    {ok, Pid} = cpg_test_server:start_link("message"),
+    % OTP behaviors require that the process group have only a single process
+    {error, {already_started, Pid}} = cpg_test_server:start_link("message"),
+    ok = cpg_test_server:put("message", "Hello World!"),
+    "Hello World!" = cpg_test_server:get("message"),
     ok.
+
+cpg_stop_test() ->
+    ok = reltool_util:application_stop(cpg).
 

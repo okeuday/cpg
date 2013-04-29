@@ -35,7 +35,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -67,6 +67,8 @@
 -endif.
 -export([start_link/0,
          start_link/1,
+         whereis_name/1,
+         register_name/2,
          get_members/1,
          get_members/2,
          get_members/3,
@@ -108,6 +110,11 @@
         pids = dict:new()                     % pid() -> list(string())
     }).
 
+-type scope() :: atom().
+-type name() :: any(). % GROUP_STORAGE macro controls this
+-type via_name() :: {scope(), name()} | name(). % for OTP behaviors
+-export_type([scope/0, name/0, via_name/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -133,9 +140,6 @@ start_link() ->
 
 start_link(Scope) when is_atom(Scope) ->
     gen_server:start_link({local, Scope}, ?MODULE, [Scope], []).
-
--type scope() :: atom().
--type name() :: string().
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 
@@ -483,9 +487,62 @@ leave(Scope, GroupName, Pid)
 
 -endif.
 
--type get_members_ret() :: list(pid()) | {'error', {'no_such_group', name()}}.
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function to provide via process registration functionality.===
+%% Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+%% process registration (instead of {local, atom()} or {global, atom()})
+%% @end
+%%-------------------------------------------------------------------------
 
--type gcp_error_reason() :: {'no_process', name()} | {'no_such_group', name()}.
+-spec whereis_name(via_name()) -> pid() | 'undefined'.
+
+whereis_name({Scope, GroupName})
+    when is_atom(Scope) ->
+    case get_random_pid(Scope, GroupName, self()) of
+        {error, _} ->
+            undefined;
+        {ok, _, Pid} ->
+            Pid
+    end;
+whereis_name(GroupName) ->
+    case get_random_pid(?DEFAULT_SCOPE, GroupName, self()) of
+        {error, _} ->
+            undefined;
+        {ok, _, Pid} ->
+            Pid
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function to provide via process registration functionality.===
+%% Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+%% process registration (instead of {local, atom()} or {global, atom()})
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec register_name(via_name(), pid()) -> 'yes' | 'no'.
+
+register_name({Scope, GroupName}, Pid) ->
+    case join(Scope, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
+register_name(GroupName, Pid) ->
+    case join(?DEFAULT_SCOPE, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end.
+
+-type get_members_ret() ::
+    {ok, name(), list(pid())} | {'error', {'no_such_group', name()}}.
+
+-type gcp_error_reason() ::
+    {'no_process', name()} | {'no_such_group', name()}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -639,7 +696,8 @@ which_groups(Scope)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_closest_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+-spec get_closest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_closest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName}).
@@ -652,7 +710,7 @@ get_closest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_closest_pid(name() | scope(), pid() | name()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_closest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -670,7 +728,7 @@ get_closest_pid(Scope, GroupName)
 %%-------------------------------------------------------------------------
 
 -spec get_closest_pid(scope(), name(), pid()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_closest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -682,7 +740,8 @@ get_closest_pid(Scope, GroupName, Exclude)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_furthest_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+-spec get_furthest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_furthest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_furthest_pid, GroupName}).
@@ -695,7 +754,7 @@ get_furthest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_furthest_pid(name() | scope(), pid() | name()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_furthest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -713,7 +772,7 @@ get_furthest_pid(Scope, GroupName)
 %%-------------------------------------------------------------------------
 
 -spec get_furthest_pid(scope(), name(), pid()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_furthest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -725,13 +784,14 @@ get_furthest_pid(Scope, GroupName, Exclude)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_random_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+-spec get_random_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_random_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName}).
 
 -spec get_random_pid(name() | scope(), pid() | name()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -756,7 +816,7 @@ get_random_pid(Scope, GroupName)
 %%-------------------------------------------------------------------------
 
 -spec get_random_pid(scope(), name(), pid()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_random_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -768,7 +828,8 @@ get_random_pid(Scope, GroupName, Exclude)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_local_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+-spec get_local_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_local_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_local_pid, GroupName}).
@@ -781,7 +842,7 @@ get_local_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_local_pid(name() | scope(), pid() | name()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_local_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -799,7 +860,7 @@ get_local_pid(Scope, GroupName)
 %%-------------------------------------------------------------------------
 
 -spec get_local_pid(scope(), name(), pid()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_local_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -811,7 +872,8 @@ get_local_pid(Scope, GroupName, Exclude)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_remote_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+-spec get_remote_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_remote_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE, {get_remote_pid, GroupName}).
@@ -824,7 +886,7 @@ get_remote_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_remote_pid(name() | scope(), pid() | name()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_remote_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -842,7 +904,7 @@ get_remote_pid(Scope, GroupName)
 %%-------------------------------------------------------------------------
 
 -spec get_remote_pid(scope(), name(), pid()) ->
-    pid() | {'error', gcp_error_reason()}.
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
 get_remote_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
