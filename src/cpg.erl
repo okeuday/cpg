@@ -48,7 +48,11 @@
 %% external interface
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 % does not require global locking
--export([join/1,
+-export([create/1,
+         create/2,
+         delete/1,
+         delete/2,
+         join/1,
          join/2,
          join/3,
          leave/1,
@@ -143,6 +147,52 @@ start_link(Scope) when is_atom(Scope) ->
     gen_server:start_link({local, Scope}, ?MODULE, [Scope], []).
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a group explicitly no-op.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec create(name()) -> 'ok'.
+
+create(_) ->
+    ok.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a group explicitly in a specific scope no-op.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec create(scope(), name()) -> 'ok'.
+
+create(Scope, _)
+    when is_atom(Scope) ->
+    ok.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Delete a group explicitly no-op.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete(name()) -> 'ok'.
+
+delete(_) ->
+    ok.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Delete a group explicitly in a specific scope no-op.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete(scope(), name()) -> 'ok'.
+
+delete(Scope, _)
+    when is_atom(Scope) ->
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
