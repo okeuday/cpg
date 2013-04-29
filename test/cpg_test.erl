@@ -64,6 +64,12 @@ via1_test() ->
     "Hello World!" = cpg_test_server:get("message"),
     ok.
 
+via2_test() ->
+    {ok, Pid} = cpg_test_server:start_link("error"),
+    erlang:unlink(Pid),
+    error = gen_server:call({via, cpg, "error"}, undefined_call),
+    ok.
+
 cpg_stop_test() ->
     ok = reltool_util:application_stop(cpg).
 
