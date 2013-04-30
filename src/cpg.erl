@@ -46,9 +46,9 @@
 -include("cpg_constants.hrl").
 
 %% external interface
--ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
-% does not require global locking
--export([create/1,
+-export([start_link/0,
+         start_link/1,
+         create/1,
          create/2,
          delete/1,
          delete/2,
@@ -57,20 +57,7 @@
          join/3,
          leave/1,
          leave/2,
-         leave/3]).
--else.
-% requires global locking
--export([create/1,
-         create/2,
-         delete/1,
-         delete/2,
-         join/2,
-         join/3,
-         leave/2,
-         leave/3]).
--endif.
--export([start_link/0,
-         start_link/1,
+         leave/3,
          whereis_name/1,
          register_name/2,
          unregister_name/1,
@@ -222,9 +209,10 @@ join(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.===
-%% The local pid must have a one-to-one relationship with self() to justify
-%% not using a distributed transaction.  A group is automatically created
-%% if it does not already exist.
+%% The pid must be a local pid to justify not using a distributed transaction
+%% since the cpg gen_server process acts like mutex lock, enforcing consistent
+%% local state for all local pid process groups.  A group is automatically
+%% created if it does not already exist.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -253,9 +241,10 @@ join(Scope, GroupName)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Join a specific group within a specific scope with a local pid.===
-%% The local pid must have a one-to-one relationship with self() to justify
-%% not using a distributed transaction.  A group is automatically created
-%% if it does not already exist.
+%% The pid must be a local pid to justify not using a distributed transaction
+%% since the cpg gen_server process acts like mutex lock, enforcing consistent
+%% local state for all local pid process groups.  A group is automatically
+%% created if it does not already exist.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -293,9 +282,10 @@ leave(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.===
-%% The local pid must have a one-to-one relationship with self() to justify
-%% not using a distributed transaction.  The group will automatically be
-%% removed if it becomes empty.
+%% The pid must be a local pid to justify not using a distributed transaction
+%% since the cpg gen_server process acts like mutex lock, enforcing consistent
+%% local state for all local pid process groups.  The group will automatically
+%% be removed if it becomes empty.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -324,9 +314,10 @@ leave(Scope, GroupName)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Leave a specific group within a specific scope with a local pid.===
-%% The local pid must have a one-to-one relationship with self() to justify
-%% not using a distributed transaction.  The group will automatically be
-%% removed if it becomes empty.
+%% The pid must be a local pid to justify not using a distributed transaction
+%% since the cpg gen_server process acts like mutex lock, enforcing consistent
+%% local state for all local pid process groups.  The group will automatically
+%% be removed if it becomes empty.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -348,9 +339,8 @@ leave(Scope, GroupName, Pid)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create a group explicitly.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The calling pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -372,9 +362,8 @@ create(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create a group explicitly in a specific scope.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The calling pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -397,9 +386,8 @@ create(Scope, GroupName)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Delete a group explicitly.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The calling pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -421,9 +409,8 @@ delete(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Delete a group explicitly in a specific scope.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The calling pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -445,10 +432,31 @@ delete(Scope, GroupName)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Join a specific group with self().===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec join(name()) -> 'ok' | 'error'.
+
+join(GroupName) ->
+    group_name_validate(GroupName),
+    Self = self(),
+    case global:trans({{?DEFAULT_SCOPE, GroupName}, Self},
+                      fun() ->
+                          gen_server:multi_call(?DEFAULT_SCOPE,
+                                                {join, GroupName, Self})
+                      end) of
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
+        _ ->
+            error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Join a specific group.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -471,9 +479,8 @@ join(GroupName, Pid)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Join a specific group in a specific scope.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -496,9 +503,30 @@ join(Scope, GroupName, Pid)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Leave a specific group.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave(name()) -> 'ok' | 'error'.
+
+leave(GroupName) ->
+    group_name_validate(GroupName),
+    Self = self(),
+    case global:trans({{?DEFAULT_SCOPE, GroupName}, Self},
+                      fun() ->
+                          gen_server:multi_call(?DEFAULT_SCOPE,
+                                                {leave, GroupName, Self})
+                      end) of
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
+        _ ->
+            error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave a specific group.===
+%% The pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -521,9 +549,8 @@ leave(GroupName, Pid)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Leave a specific group in a specific scope.===
-%% The pid does not need to be a local pid with a one-to-one relationship
-%% with self() (this function uses a distributed transaction to enforce
-%% consistency).
+%% The pid does not need to be a local pid because the function uses a
+%% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -563,6 +590,7 @@ whereis_name({local, Scope, GroupName})
         {ok, _, Pid} ->
             Pid
     end;
+
 whereis_name({global, Scope, GroupName})
     when is_atom(Scope) ->
     case get_random_pid(Scope, GroupName) of
@@ -571,6 +599,7 @@ whereis_name({global, Scope, GroupName})
         {ok, _, Pid} ->
             Pid
     end;
+
 whereis_name({local, GroupName}) ->
     case get_local_pid(?DEFAULT_SCOPE, GroupName) of
         {error, _} ->
@@ -578,6 +607,7 @@ whereis_name({local, GroupName}) ->
         {ok, _, Pid} ->
             Pid
     end;
+
 whereis_name({global, GroupName}) ->
     case get_random_pid(?DEFAULT_SCOPE, GroupName) of
         {error, _} ->
@@ -585,18 +615,20 @@ whereis_name({global, GroupName}) ->
         {ok, _, Pid} ->
             Pid
     end;
+
 whereis_name({Scope, GroupName})
     when is_atom(Scope) ->
-    % default is global
-    case get_random_pid(Scope, GroupName) of
+    % default is local
+    case get_local_pid(Scope, GroupName) of
         {error, _} ->
             undefined;
         {ok, _, Pid} ->
             Pid
     end;
+
 whereis_name(GroupName) ->
-    % default is global
-    case get_random_pid(?DEFAULT_SCOPE, GroupName) of
+    % default is local
+    case get_local_pid(?DEFAULT_SCOPE, GroupName) of
         {error, _} ->
             undefined;
         {ok, _, Pid} ->
@@ -622,6 +654,7 @@ register_name({RegistrationType, Scope, GroupName}, Pid)
         error ->
             no
     end;
+
 register_name({RegistrationType, GroupName}, Pid)
     when RegistrationType =:= local;
          RegistrationType =:= global ->
@@ -631,6 +664,7 @@ register_name({RegistrationType, GroupName}, Pid)
         error ->
             no
     end;
+
 register_name({Scope, GroupName}, Pid) ->
     case join(Scope, GroupName, Pid) of
         ok ->
@@ -638,6 +672,7 @@ register_name({Scope, GroupName}, Pid) ->
         error ->
             no
     end;
+
 register_name(GroupName, Pid) ->
     case join(?DEFAULT_SCOPE, GroupName, Pid) of
         ok ->
@@ -660,12 +695,15 @@ unregister_name({RegistrationType, Scope, GroupName})
     when RegistrationType =:= local;
          RegistrationType =:= global ->
     leave(Scope, GroupName, self());
+
 unregister_name({RegistrationType, GroupName})
     when RegistrationType =:= local;
          RegistrationType =:= global ->
     leave(?DEFAULT_SCOPE, GroupName, self());
+
 unregister_name({Scope, GroupName}) ->
     leave(Scope, GroupName, self());
+
 unregister_name(GroupName) ->
     leave(?DEFAULT_SCOPE, GroupName, self()).
 

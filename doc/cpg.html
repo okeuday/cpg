@@ -16,7 +16,7 @@
    (lib/kernel-x.x.x/src/pg2.erl).
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.2 Apr 29 2013 15:33:44
+<p><b>Version:</b> 1.2.2 Apr 30 2013 09:56:04
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -57,30 +57,26 @@
   <h4><a name="Create_a_group_explicitly_no-op.">Create a group explicitly no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#create-1">create/1</a></td><td>
   <h4><a name="Create_a_group_explicitly.">Create a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#create-2">create/2</a></td><td>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#create-2">create/2</a></td><td>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope.">Create a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#delete-1">delete/1</a></td><td>
   <h4><a name="Delete_a_group_explicitly_no-op.">Delete a group explicitly no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#delete-1">delete/1</a></td><td>
   <h4><a name="Delete_a_group_explicitly.">Delete a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#delete-2">delete/2</a></td><td>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#delete-2">delete/2</a></td><td>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope.">Delete a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-1">get_closest_pid/1</a></td><td>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-2">get_closest_pid/2</a></td><td>
@@ -148,45 +144,49 @@
 <tr><td valign="top"><a href="#join-1">join/1</a></td><td>
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
   A group is automatically created if it does not already exist.</td></tr>
+<tr><td valign="top"><a href="#join-1">join/1</a></td><td>
+  <h4><a name="Join_a_specific_group_with_self().">Join a specific group with self().</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#join-2">join/2</a></td><td>
   <h4><a name="Join_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#join-2">join/2</a></td><td>
   <h4><a name="Join_a_specific_group.">Join a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#join-3">join/3</a></td><td>
   <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#join-3">join/3</a></td><td>
   <h4><a name="Join_a_specific_group_in_a_specific_scope.">Join a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#leave-1">leave/1</a></td><td>
   <h4><a name="Leave_a_specific_group_with_a_local_pid.">Leave a specific group with a local pid.</a></h4>
   The group is automatically removed if it becomes empty.</td></tr>
+<tr><td valign="top"><a href="#leave-1">leave/1</a></td><td>
+  <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#leave-2">leave/2</a></td><td>
   <h4><a name="Leave_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#leave-2">leave/2</a></td><td>
   <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#leave-3">leave/3</a></td><td>
   <h4><a name="Leave_a_specific_group_within_a_specific_scope_with_a_local_pid.">Leave a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#leave-3">leave/3</a></td><td>
   <h4><a name="Leave_a_specific_group_in_a_specific_scope.">Leave a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#register_name-2">register_name/2</a></td><td>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -223,9 +223,8 @@
 <p><tt>create(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Create_a_group_explicitly.">Create a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="create-2">create/2</a></h3>
 <div class="spec">
@@ -239,9 +238,8 @@
 <p><tt>create(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope.">Create a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="delete-1">delete/1</a></h3>
 <div class="spec">
@@ -255,9 +253,8 @@
 <p><tt>delete(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly.">Delete a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="delete-2">delete/2</a></h3>
 <div class="spec">
@@ -271,9 +268,8 @@
 <p><tt>delete(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope.">Delete a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="get_closest_pid-1">get_closest_pid/1</a></h3>
 <div class="spec">
@@ -450,41 +446,48 @@
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
   A group is automatically created if it does not already exist.</p>
 
+<h3 class="function"><a name="join-1">join/1</a></h3>
+<div class="spec">
+<p><tt>join(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Join_a_specific_group_with_self().">Join a specific group with self().</a></h4>
+</p>
+
 <h3 class="function"><a name="join-2">join/2</a></h3>
 <div class="spec">
 <p><tt>join(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  A group is automatically created
-  if it does not already exist.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  A group is automatically
+  created if it does not already exist.</p>
 
 <h3 class="function"><a name="join-2">join/2</a></h3>
 <div class="spec">
 <p><tt>join(GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group.">Join a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="join-3">join/3</a></h3>
 <div class="spec">
 <p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  A group is automatically created
-  if it does not already exist.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  A group is automatically
+  created if it does not already exist.</p>
 
 <h3 class="function"><a name="join-3">join/3</a></h3>
 <div class="spec">
 <p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_in_a_specific_scope.">Join a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="leave-1">leave/1</a></h3>
 <div class="spec">
@@ -493,41 +496,48 @@
   <h4><a name="Leave_a_specific_group_with_a_local_pid.">Leave a specific group with a local pid.</a></h4>
   The group is automatically removed if it becomes empty.</p>
 
+<h3 class="function"><a name="leave-1">leave/1</a></h3>
+<div class="spec">
+<p><tt>leave(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>
+</p>
+
 <h3 class="function"><a name="leave-2">leave/2</a></h3>
 <div class="spec">
 <p><tt>leave(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  The group will automatically be
-  removed if it becomes empty.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  The group will automatically
+  be removed if it becomes empty.</p>
 
 <h3 class="function"><a name="leave-2">leave/2</a></h3>
 <div class="spec">
 <p><tt>leave(GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="leave-3">leave/3</a></h3>
 <div class="spec">
 <p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group_within_a_specific_scope_with_a_local_pid.">Leave a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  The group will automatically be
-  removed if it becomes empty.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  The group will automatically
+  be removed if it becomes empty.</p>
 
 <h3 class="function"><a name="leave-3">leave/3</a></h3>
 <div class="spec">
 <p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group_in_a_specific_scope.">Leave a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="register_name-2">register_name/2</a></h3>
 <div class="spec">
@@ -583,6 +593,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Apr 29 2013, 15:33:44.</i></p>
+<p><i>Generated by EDoc, Apr 30 2013, 09:56:04.</i></p>
 </body>
 </html>
