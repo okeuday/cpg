@@ -70,6 +70,31 @@ via2_test() ->
     error = gen_server:call({via, cpg, "error"}, undefined_call),
     ok.
 
+pid_age_test() ->
+    Pid1 = erlang:spawn(fun busy_pid/0),
+    Pid2 = erlang:spawn(fun busy_pid/0),
+    Pid3 = erlang:spawn(fun busy_pid/0),
+    ok = cpg:join("GroupA", Pid1),
+    ok = cpg:join("GroupA", Pid2),
+    ok = cpg:join("GroupA", Pid3),
+    ok = cpg:join("GroupA", Pid1),
+    ok = cpg:join("GroupA", Pid2),
+    {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
+    {ok, "GroupA", Pid1} = cpg:get_newest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid1} = cpg:get_oldest_pid("GroupA"),
+    {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA", Pid1),
+    erlang:exit(Pid1, kill),
+    timer:sleep(1000),
+    {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
+    erlang:exit(Pid2, kill),
+    erlang:exit(Pid3, kill),
+    ok.
+
 cpg_stop_test() ->
     ok = reltool_util:application_stop(cpg).
+
+busy_pid() ->
+    timer:sleep(1000),
+    busy_pid().
 

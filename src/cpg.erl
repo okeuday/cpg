@@ -86,7 +86,13 @@
          get_local_pid/3,
          get_remote_pid/1,
          get_remote_pid/2,
-         get_remote_pid/3]).
+         get_remote_pid/3,
+         get_oldest_pid/1,
+         get_oldest_pid/2,
+         get_oldest_pid/3,
+         get_newest_pid/1,
+         get_newest_pid/2,
+         get_newest_pid/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
@@ -593,7 +599,7 @@ whereis_name({local, Scope, GroupName})
 
 whereis_name({global, Scope, GroupName})
     when is_atom(Scope) ->
-    case get_random_pid(Scope, GroupName) of
+    case get_oldest_pid(Scope, GroupName) of
         {error, _} ->
             undefined;
         {ok, _, Pid} ->
@@ -609,7 +615,7 @@ whereis_name({local, GroupName}) ->
     end;
 
 whereis_name({global, GroupName}) ->
-    case get_random_pid(?DEFAULT_SCOPE, GroupName) of
+    case get_oldest_pid(?DEFAULT_SCOPE, GroupName) of
         {error, _} ->
             undefined;
         {ok, _, Pid} ->
@@ -1079,6 +1085,94 @@ get_remote_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_remote_pid, GroupName, Exclude}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_oldest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+get_oldest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_oldest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_oldest_pid(name() | scope(), pid() | name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+get_oldest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_oldest_pid, GroupName, Exclude});
+
+get_oldest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_oldest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_oldest_pid(scope(), name(), pid()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+get_oldest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_oldest_pid, GroupName, Exclude}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_newest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+get_newest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_newest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_newest_pid(name() | scope(), pid() | name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+get_newest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_newest_pid, GroupName, Exclude});
+
+get_newest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_newest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_newest_pid(scope(), name(), pid()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+get_newest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_newest_pid, GroupName, Exclude}).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -1209,6 +1303,22 @@ handle_call({get_remote_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_remote_pid(GroupName, Exclude, Groups), State};
 
+handle_call({get_oldest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_oldest_pid(GroupName, Groups), State};
+
+handle_call({get_oldest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_oldest_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_newest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_newest_pid(GroupName, Groups), State};
+
+handle_call({get_newest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_newest_pid(GroupName, Exclude, Groups), State};
+
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
@@ -1311,22 +1421,28 @@ join_group(GroupName, Pid, #state{groups = Groups,
         node() =:= node(Pid) ->
             ?GROUP_STORAGE:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
-                              local = Local} = OldValue) ->
+                              local = Local,
+                              history = History} = OldValue) ->
                     OldValue#cpg_data{local_count = LocalI + 1,
-                                      local = [Entry | Local]}
+                                      local = [Entry | Local],
+                                      history = [Pid | History]}
                 end,
                 #cpg_data{local_count = 1,
-                          local = [Entry]},
+                          local = [Entry],
+                          history = [Pid]},
                 Groups);
         true ->
             ?GROUP_STORAGE:update(GroupName,
                 fun(#cpg_data{remote_count = RemoteI,
-                              remote = Remote} = OldValue) ->
+                              remote = Remote,
+                              history = History} = OldValue) ->
                     OldValue#cpg_data{remote_count = RemoteI + 1,
-                                      remote = [Entry | Remote]}
+                                      remote = [Entry | Remote],
+                                      history = [Pid | History]}
                 end,
                 #cpg_data{remote_count = 1,
-                          remote = [Entry]},
+                          remote = [Entry],
+                          history = [Pid]},
                 Groups)
     end,
     GroupNameList = [GroupName],
@@ -1353,22 +1469,26 @@ leave_group(GroupName, Pid, #state{groups = Groups,
         node() =:= node(Pid) ->
             ?GROUP_STORAGE:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
-                              local = Local} = OldValue) ->
+                              local = Local,
+                              history = History} = OldValue) ->
                     {OldLocal,
                      NewLocal} = lists:partition(Fpartition, Local),
                     OldValue#cpg_data{local_count = LocalI -
                                       erlang:length(OldLocal),
-                                      local = NewLocal}
+                                      local = NewLocal,
+                                      history = delete_all(Pid, History)}
                 end, Groups);
         true ->
             ?GROUP_STORAGE:update(GroupName,
                 fun(#cpg_data{remote_count = RemoteI,
-                              remote = Remote} = OldValue) ->
+                              remote = Remote,
+                              history = History} = OldValue) ->
                     {OldRemote,
                      NewRemote} = lists:partition(Fpartition, Remote),
                     OldValue#cpg_data{remote_count = RemoteI -
                                       erlang:length(OldRemote),
-                                      remote = NewRemote}
+                                      remote = NewRemote,
+                                      history = delete_all(Pid, History)}
                 end, Groups)
     end,
     NewPids = dict:update(Pid,
@@ -1379,24 +1499,36 @@ leave_group(GroupName, Pid, #state{groups = Groups,
     State#state{groups = NewGroups,
                 pids = NewPids}.
 
-store_conflict_add(0, Entries, _) ->
+store_conflict_add_entries(0, Entries, _) ->
     Entries;
-store_conflict_add(I, Entries, Pid) ->
+store_conflict_add_entries(I, Entries, Pid) ->
     Ref = erlang:monitor(process, Pid),
-    store_conflict_add(I - 1,
-                       [#cpg_data_pid{pid = Pid,
-                                      monitor = Ref} | Entries], Pid).
+    store_conflict_add_entries(I - 1,
+                               [#cpg_data_pid{pid = Pid,
+                                              monitor = Ref} |
+                                Entries], Pid).
 
-store_conflict_remove_monitors([]) ->
+store_conflict_add_history(0, History, _) ->
+    History;
+store_conflict_add_history(I, History, Pid) ->
+    store_conflict_add_history(I - 1, [Pid | History], Pid).
+
+store_conflict_remove_entries_monitors([]) ->
     ok;
-store_conflict_remove_monitors([#cpg_data_pid{monitor = M} | OldEntries]) ->
+store_conflict_remove_entries_monitors([#cpg_data_pid{monitor = M} |
+                                        OldEntries]) ->
     true = erlang:demonitor(M, [flush]),
-    store_conflict_remove_monitors(OldEntries).
+    store_conflict_remove_entries_monitors(OldEntries).
 
-store_conflict_remove(I, Entries) ->
-    {Remove, NewEntries} = lists:split(I, Entries),
-    store_conflict_remove_monitors(Remove),
+store_conflict_remove_entries(I, Entries) ->
+    {Remove, NewEntries} = lists:split(I * -1, Entries),
+    store_conflict_remove_entries_monitors(Remove),
     NewEntries.
+
+store_conflict_remove_history(0, History, _) ->
+    History;
+store_conflict_remove_history(I, History, Pid) ->
+    store_conflict_remove_history(I + 1, lists:delete(Pid, History), Pid).
 
 store_conflict_f([], V2, _) ->
     V2;
@@ -1404,7 +1536,8 @@ store_conflict_f([Pid | V1AllPids],
                  #cpg_data{local_count = LocalI,
                            local = Local,
                            remote_count = RemoteI,
-                           remote = Remote} = V2, V1All) ->
+                           remote = Remote,
+                           history = History} = V2, V1All) ->
     % for each external Pid, check the internal Pids within the same group
     Fpartition = fun(#cpg_data_pid{pid = P}) ->
         if 
@@ -1424,18 +1557,22 @@ store_conflict_f([Pid | V1AllPids],
             if
                 I > 0 ->
                     % add
-                    NewLocal = store_conflict_add(I, Local, Pid),
+                    NewLocal = store_conflict_add_entries(I, Local, Pid),
+                    NewHistory = store_conflict_add_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
                                      V2#cpg_data{local_count = LocalI + I,
-                                                 local = NewLocal},
+                                                 local = NewLocal,
+                                                 history = NewHistory},
                                      V1All);
                 I < 0 ->
                     % remove
-                    NewV2Pids = store_conflict_remove(I * -1, V2Pids),
+                    NewV2Pids = store_conflict_remove_entries(I, V2Pids),
+                    NewHistory = store_conflict_remove_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
                                      V2#cpg_data{local_count = LocalI + I,
                                                  local = NewV2Pids ++
-                                                         LocalRest},
+                                                         LocalRest,
+                                                 history = NewHistory},
                                      V1All);
                 true ->
                     store_conflict_f(V1AllPids, V2, V1All)
@@ -1449,18 +1586,22 @@ store_conflict_f([Pid | V1AllPids],
             if
                 I > 0 ->
                     % add
-                    NewRemote = store_conflict_add(I, Remote, Pid),
+                    NewRemote = store_conflict_add_entries(I, Remote, Pid),
+                    NewHistory = store_conflict_add_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
                                      V2#cpg_data{remote_count = RemoteI + I,
-                                                 remote = NewRemote},
+                                                 remote = NewRemote,
+                                                 history = NewHistory},
                                      V1All);
                 I < 0 ->
                     % remove
-                    NewV2Pids = store_conflict_remove(I * -1, V2Pids),
+                    NewV2Pids = store_conflict_remove_entries(I, V2Pids),
+                    NewHistory = store_conflict_remove_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
                                      V2#cpg_data{remote_count = RemoteI + I,
                                                  remote = NewV2Pids ++
-                                                          RemoteRest},
+                                                          RemoteRest,
+                                                 history = NewHistory},
                                      V1All);
                 true ->
                     store_conflict_f(V1AllPids, V2, V1All)
@@ -1477,9 +1618,6 @@ store_conflict(_,
                          Pid
                      end, V1All)),
                      V2, V1All).
-
-store_new_group(OldEntries) ->
-    store_new_group(OldEntries, #cpg_data{}).
 
 store_new_group([], V2) ->
     V2;
@@ -1508,7 +1646,8 @@ store(#state{groups = ExternalGroups,
     % V2 is internal
     NewGroups = ?GROUP_STORAGE:fold(fun(GroupName,
         #cpg_data{local = V1Local,
-                  remote = V1Remote} = V1, T) ->
+                  remote = V1Remote,
+                  history = V1History} = V1, T) ->
         case ?GROUP_STORAGE:is_key(GroupName, T) of
             true ->
                 % merge the external group in
@@ -1519,7 +1658,8 @@ store(#state{groups = ExternalGroups,
             false ->
                 % create the new external group as an internal group
                 ?GROUP_STORAGE:store(GroupName,
-                    store_new_group(V1Local ++ V1Remote), T)
+                    store_new_group(V1Local ++ V1Remote,
+                                    #cpg_data{history = V1History}), T)
         end
     end, Groups, ExternalGroups),
     NewPids = dict:merge(fun(_, V1, V2) ->
@@ -1531,9 +1671,7 @@ store(#state{groups = ExternalGroups,
 member_died(Pid, #state{pids = Pids} = State) ->
     case dict:find(Pid, Pids) of
         error ->
-            % if a pid is added to a group multiple times,
-            % a monitor is created for each instance
-            % (so later monitor messages will fail the lookup here)
+            % monitor message latency
             State;
         {ok, GroupNames} ->
             lists:foldl(fun(GroupName, S) ->
@@ -1557,3 +1695,11 @@ check_multi_call_replies([{_, ok} | Replies]) ->
 check_multi_call_replies([{_, Result} | _]) ->
     Result.
 
+delete_all(Elem, List) when is_list(List) ->
+    delete_all(Elem, [], List).
+delete_all(Elem, L, [Elem | T]) ->
+    delete_all(Elem, L, T);
+delete_all(Elem, L, [H | T]) ->
+    delete_all(Elem, [H | L], T);
+delete_all(_, L, []) ->
+    lists:reverse(L).
