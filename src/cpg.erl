@@ -110,11 +110,14 @@
 
 -type scope() :: atom().
 -type name() :: any(). % GROUP_STORAGE macro controls this
--type via_name() :: {'local', scope(), name()} |
+-type via_name() :: {'local', scope(), name(), pos_integer()} |
                     {'global', scope(), name()} |
-                    {'local', name()} |
+                    {'local', scope(), name()} |
+                    {'local', name(), pos_integer()} |
                     {'global', name()} |
+                    {'local', name()} |
                     {scope(), name()} |
+                    {name(), pos_integer()} |
                     name(). % for OTP behaviors
 -export_type([scope/0, name/0, via_name/0]).
 
@@ -588,57 +591,117 @@ leave(Scope, GroupName, Pid)
 
 -spec whereis_name(via_name()) -> pid() | 'undefined'.
 
-whereis_name({local, Scope, GroupName})
-    when is_atom(Scope) ->
-    case get_local_pid(Scope, GroupName) of
+whereis_name({local, Scope, GroupName, Instances})
+    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
+    case get_local_members(Scope, GroupName) of
+        {ok, _, Pids} ->
+            Count = erlang:length(Pids),
+            if
+                Count < Instances ->
+                    undefined;
+                true ->
+                    whereis_name_pick(Count, Pids)
+            end;
         {error, _} ->
-            undefined;
-        {ok, _, Pid} ->
-            Pid
+            undefined
     end;
 
 whereis_name({global, Scope, GroupName})
     when is_atom(Scope) ->
     case get_oldest_pid(Scope, GroupName) of
-        {error, _} ->
-            undefined;
         {ok, _, Pid} ->
-            Pid
+            Pid;
+        {error, _} ->
+            undefined
     end;
 
-whereis_name({local, GroupName}) ->
-    case get_local_pid(?DEFAULT_SCOPE, GroupName) of
-        {error, _} ->
-            undefined;
+whereis_name({local, Scope, GroupName})
+    when is_atom(Scope) ->
+    case get_local_pid(Scope, GroupName) of
         {ok, _, Pid} ->
-            Pid
+            Pid;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({local, GroupName, Instances})
+    when is_integer(Instances), Instances > 0 ->
+    case get_local_members(GroupName) of
+        {ok, _, Pids} ->
+            Count = erlang:length(Pids),
+            if
+                Count < Instances ->
+                    undefined;
+                true ->
+                    whereis_name_pick(Count, Pids)
+            end;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({Scope, GroupName, Instances})
+    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
+    case get_local_members(Scope, GroupName) of
+        {ok, _, Pids} ->
+            Count = erlang:length(Pids),
+            if
+                Count < Instances ->
+                    undefined;
+                true ->
+                    whereis_name_pick(Count, Pids)
+            end;
+        {error, _} ->
+            undefined
     end;
 
 whereis_name({global, GroupName}) ->
     case get_oldest_pid(?DEFAULT_SCOPE, GroupName) of
-        {error, _} ->
-            undefined;
         {ok, _, Pid} ->
-            Pid
+            Pid;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({local, GroupName}) ->
+    case get_local_pid(?DEFAULT_SCOPE, GroupName) of
+        {ok, _, Pid} ->
+            Pid;
+        {error, _} ->
+            undefined
     end;
 
 whereis_name({Scope, GroupName})
     when is_atom(Scope) ->
     % default is local
     case get_local_pid(Scope, GroupName) of
-        {error, _} ->
-            undefined;
         {ok, _, Pid} ->
-            Pid
+            Pid;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({GroupName, Instances})
+    when is_integer(Instances), Instances > 0 ->
+    case get_local_members(GroupName) of
+        {ok, _, Pids} ->
+            Count = erlang:length(Pids),
+            if
+                Count < Instances ->
+                    undefined;
+                true ->
+                    whereis_name_pick(Count, Pids)
+            end;
+        {error, _} ->
+            undefined
     end;
 
 whereis_name(GroupName) ->
     % default is local
     case get_local_pid(?DEFAULT_SCOPE, GroupName) of
-        {error, _} ->
-            undefined;
         {ok, _, Pid} ->
-            Pid
+            Pid;
+        {error, _} ->
+            undefined
     end.
 
 %%-------------------------------------------------------------------------
@@ -651,9 +714,8 @@ whereis_name(GroupName) ->
 
 -spec register_name(via_name(), pid()) -> 'yes' | 'no'.
 
-register_name({RegistrationType, Scope, GroupName}, Pid)
-    when RegistrationType =:= local;
-         RegistrationType =:= global ->
+register_name({local, Scope, GroupName, Instances}, Pid)
+    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
     case join(Scope, GroupName, Pid) of
         ok ->
             yes;
@@ -661,9 +723,18 @@ register_name({RegistrationType, Scope, GroupName}, Pid)
             no
     end;
 
-register_name({RegistrationType, GroupName}, Pid)
-    when RegistrationType =:= local;
-         RegistrationType =:= global ->
+register_name({RegistrationType, Scope, GroupName}, Pid)
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local), is_atom(Scope) ->
+    case join(Scope, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
+
+register_name({local, GroupName, Instances}, Pid)
+    when is_integer(Instances), Instances > 0 ->
     case join(?DEFAULT_SCOPE, GroupName, Pid) of
         ok ->
             yes;
@@ -671,8 +742,28 @@ register_name({RegistrationType, GroupName}, Pid)
             no
     end;
 
-register_name({Scope, GroupName}, Pid) ->
+register_name({RegistrationType, GroupName}, Pid)
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local) ->
+    case join(?DEFAULT_SCOPE, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
+
+register_name({Scope, GroupName}, Pid)
+    when is_atom(Scope) ->
     case join(Scope, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
+
+register_name({GroupName, Instances}, Pid)
+    when is_integer(Instances), Instances > 0 ->
+    case join(?DEFAULT_SCOPE, GroupName, Pid) of
         ok ->
             yes;
         error ->
@@ -697,18 +788,31 @@ register_name(GroupName, Pid) ->
 
 -spec unregister_name(via_name()) -> 'ok' | 'error'.
 
-unregister_name({RegistrationType, Scope, GroupName})
-    when RegistrationType =:= local;
-         RegistrationType =:= global ->
+unregister_name({local, Scope, GroupName, Instances})
+    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
     leave(Scope, GroupName, self());
 
-unregister_name({RegistrationType, GroupName})
-    when RegistrationType =:= local;
-         RegistrationType =:= global ->
+unregister_name({RegistrationType, Scope, GroupName})
+    when (RegistrationType =:= local orelse
+          RegistrationType =:= global), is_atom(Scope) ->
+    leave(Scope, GroupName, self());
+
+unregister_name({local, GroupName, Instances})
+    when is_integer(Instances), Instances > 0 ->
     leave(?DEFAULT_SCOPE, GroupName, self());
 
-unregister_name({Scope, GroupName}) ->
+unregister_name({RegistrationType, GroupName})
+    when (RegistrationType =:= local orelse
+          RegistrationType =:= global) ->
+    leave(?DEFAULT_SCOPE, GroupName, self());
+
+unregister_name({Scope, GroupName})
+    when is_atom(Scope) ->
     leave(Scope, GroupName, self());
+
+unregister_name({GroupName, Instances})
+    when is_integer(Instances), Instances > 0 ->
+    leave(?DEFAULT_SCOPE, GroupName, self());
 
 unregister_name(GroupName) ->
     leave(?DEFAULT_SCOPE, GroupName, self()).
@@ -1695,6 +1799,11 @@ check_multi_call_replies([{_, ok} | Replies]) ->
 check_multi_call_replies([{_, Result} | _]) ->
     Result.
 
+whereis_name_pick(1, [Pid]) ->
+    Pid;
+whereis_name_pick(N, L) ->
+    lists:nth(random(N), L).
+
 delete_all(Elem, List) when is_list(List) ->
     delete_all(Elem, [], List).
 delete_all(Elem, L, [Elem | T]) ->
@@ -1703,3 +1812,9 @@ delete_all(Elem, L, [H | T]) ->
     delete_all(Elem, [H | L], T);
 delete_all(_, L, []) ->
     lists:reverse(L).
+
+-compile({inline, [{random,1}]}).
+
+random(N) ->
+    quickrand:uniform(N).
+

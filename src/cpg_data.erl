@@ -672,6 +672,8 @@ pick(N1, L1, N2, L2, Exclude, GroupName, Pattern) ->
             Success
     end.
 
+-compile({inline, [{random,1}]}).
+
 random(N) ->
     quickrand:uniform(N).
 

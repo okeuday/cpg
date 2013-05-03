@@ -62,12 +62,43 @@ via1_test() ->
     {error, {already_started, Pid}} = cpg_test_server:start_link("message"),
     ok = cpg_test_server:put("message", "Hello World!"),
     "Hello World!" = cpg_test_server:get("message"),
+    erlang:unlink(Pid),
+    erlang:exit(Pid, kill),
     ok.
 
 via2_test() ->
     {ok, Pid} = cpg_test_server:start_link("error"),
     erlang:unlink(Pid),
     error = gen_server:call({via, cpg, "error"}, undefined_call),
+    false = is_process_alive(Pid),
+    ok.
+
+via3_test() ->
+    ViaName = {"local group", 4},
+    {ok, Pid1} = cpg_test_server:start_link(ViaName),
+    {ok, Pid2} = cpg_test_server:start_link(ViaName),
+    {ok, Pid3} = cpg_test_server:start_link(ViaName),
+    {ok, Pid4} = cpg_test_server:start_link(ViaName),
+    Pids = [Pid1, Pid2, Pid3, Pid4],
+    I1 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I1),
+    I2 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I2),
+    I3 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I3),
+    I4 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I4),
+    I5 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I4),
+    true = (I1 /= I2 orelse I1 /= I3 orelse I1 /= I4 orelse I1 /= I5),
+    erlang:unlink(Pid1),
+    erlang:exit(Pid1, kill),
+    erlang:unlink(Pid2),
+    erlang:exit(Pid2, kill),
+    erlang:unlink(Pid3),
+    erlang:exit(Pid3, kill),
+    erlang:unlink(Pid4),
+    erlang:exit(Pid4, kill),
     ok.
 
 pid_age_test() ->
@@ -97,4 +128,13 @@ cpg_stop_test() ->
 busy_pid() ->
     timer:sleep(1000),
     busy_pid().
+
+index(Item, List) ->
+    index(Item, List, 1).
+index(_, [], _) ->
+    not_found;
+index(Item, [Item|_], Index) ->
+    Index;
+index(Item, [_|Tl], Index) ->
+    index(Item, Tl, Index + 1).
 

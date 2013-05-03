@@ -56,7 +56,8 @@
 %% external interface
 -export([start_link/1,
          put/2,
-         get/1]).
+         get/1,
+         pid/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -89,6 +90,9 @@ put(ViaName, Value) ->
 get(ViaName) ->
     gen_server:call({via, cpg, ViaName}, get).
 
+pid(ViaName) ->
+    gen_server:call({via, cpg, ViaName}, pid).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -101,6 +105,9 @@ handle_call({put, Value}, _, State) ->
 
 handle_call(get, _, #state{value = Value} = State) ->
     {reply, Value, State};
+
+handle_call(pid, _, State) ->
+    {reply, self(), State};
 
 handle_call(_, _, State) ->
     {stop, unknown_call, error, State}.
