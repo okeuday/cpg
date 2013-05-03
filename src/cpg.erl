@@ -110,9 +110,11 @@
 
 -type scope() :: atom().
 -type name() :: any(). % GROUP_STORAGE macro controls this
--type via_name() :: {'local', scope(), name(), pos_integer()} |
+-type via_name() :: {'global', scope(), name(), pos_integer()} |
+                    {'local', scope(), name(), pos_integer()} |
                     {'global', scope(), name()} |
                     {'local', scope(), name()} |
+                    {'global', name(), pos_integer()} |
                     {'local', name(), pos_integer()} |
                     {'global', name()} |
                     {'local', name()} |
@@ -591,6 +593,21 @@ leave(Scope, GroupName, Pid)
 
 -spec whereis_name(via_name()) -> pid() | 'undefined'.
 
+whereis_name({global, Scope, GroupName, Instances})
+    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
+    case get_members(Scope, GroupName) of
+        {ok, _, Pids} ->
+            Count = erlang:length(Pids),
+            if
+                Count < Instances ->
+                    undefined;
+                true ->
+                    whereis_name_pick(Count, Pids)
+            end;
+        {error, _} ->
+            undefined
+    end;
+
 whereis_name({local, Scope, GroupName, Instances})
     when is_atom(Scope), is_integer(Instances), Instances > 0 ->
     case get_local_members(Scope, GroupName) of
@@ -620,6 +637,21 @@ whereis_name({local, Scope, GroupName})
     case get_local_pid(Scope, GroupName) of
         {ok, _, Pid} ->
             Pid;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({global, GroupName, Instances})
+    when is_integer(Instances), Instances > 0 ->
+    case get_members(GroupName) of
+        {ok, _, Pids} ->
+            Count = erlang:length(Pids),
+            if
+                Count < Instances ->
+                    undefined;
+                true ->
+                    whereis_name_pick(Count, Pids)
+            end;
         {error, _} ->
             undefined
     end;
@@ -714,8 +746,10 @@ whereis_name(GroupName) ->
 
 -spec register_name(via_name(), pid()) -> 'yes' | 'no'.
 
-register_name({local, Scope, GroupName, Instances}, Pid)
-    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
+register_name({RegistrationType, Scope, GroupName, Instances}, Pid)
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local), is_atom(Scope),
+         is_integer(Instances), Instances > 0 ->
     case join(Scope, GroupName, Pid) of
         ok ->
             yes;
@@ -733,8 +767,10 @@ register_name({RegistrationType, Scope, GroupName}, Pid)
             no
     end;
 
-register_name({local, GroupName, Instances}, Pid)
-    when is_integer(Instances), Instances > 0 ->
+register_name({RegistrationType, GroupName, Instances}, Pid)
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local),
+         is_integer(Instances), Instances > 0 ->
     case join(?DEFAULT_SCOPE, GroupName, Pid) of
         ok ->
             yes;
@@ -788,22 +824,26 @@ register_name(GroupName, Pid) ->
 
 -spec unregister_name(via_name()) -> 'ok' | 'error'.
 
-unregister_name({local, Scope, GroupName, Instances})
-    when is_atom(Scope), is_integer(Instances), Instances > 0 ->
+unregister_name({RegistrationType, Scope, GroupName, Instances})
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local), is_atom(Scope),
+         is_integer(Instances), Instances > 0 ->
     leave(Scope, GroupName, self());
 
 unregister_name({RegistrationType, Scope, GroupName})
-    when (RegistrationType =:= local orelse
-          RegistrationType =:= global), is_atom(Scope) ->
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local), is_atom(Scope) ->
     leave(Scope, GroupName, self());
 
-unregister_name({local, GroupName, Instances})
-    when is_integer(Instances), Instances > 0 ->
+unregister_name({RegistrationType, GroupName, Instances})
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local),
+         is_integer(Instances), Instances > 0 ->
     leave(?DEFAULT_SCOPE, GroupName, self());
 
 unregister_name({RegistrationType, GroupName})
-    when (RegistrationType =:= local orelse
-          RegistrationType =:= global) ->
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local) ->
     leave(?DEFAULT_SCOPE, GroupName, self());
 
 unregister_name({Scope, GroupName})

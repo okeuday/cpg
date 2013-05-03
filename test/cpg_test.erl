@@ -129,12 +129,13 @@ busy_pid() ->
     timer:sleep(1000),
     busy_pid().
 
-index(Item, List) ->
-    index(Item, List, 1).
+index(Item, L)
+    when is_list(L) ->
+    index(Item, L, 1).
 index(_, [], _) ->
     not_found;
-index(Item, [Item|_], Index) ->
-    Index;
-index(Item, [_|Tl], Index) ->
-    index(Item, Tl, Index + 1).
+index(Item, [Item | _], I) ->
+    I;
+index(Item, [_ | T], I) ->
+    index(Item, T, I + 1).
 
