@@ -353,7 +353,7 @@ nomad_restart(_Reason,
     NextSupPid = cpg_random_pid(Name, self()),
     if
         erlang:length(NewRestarts) > MaxR ->
-            ok;
+            report_error(shutdown, reached_max_restart_intensity, NomadState);
         NextSupPid =:= undefined ->
             report_error(restart_error, noproc, NomadState);
         true ->
