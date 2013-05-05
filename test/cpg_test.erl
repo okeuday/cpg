@@ -54,7 +54,8 @@
 -include_lib("eunit/include/eunit.hrl").
 
 cpg_start_test() ->
-    ok = reltool_util:application_start(cpg).
+    ok = reltool_util:application_start(cpg),
+    ok = application:start(sasl).
 
 via1_test() ->
     {ok, Pid} = cpg_test_server:start_link("message"),
@@ -89,7 +90,7 @@ via3_test() ->
     I4 = index(cpg_test_server:pid(ViaName), Pids),
     true = is_integer(I4),
     I5 = index(cpg_test_server:pid(ViaName), Pids),
-    true = is_integer(I4),
+    true = is_integer(I5),
     true = (I1 /= I2 orelse I1 /= I3 orelse I1 /= I4 orelse I1 /= I5),
     erlang:unlink(Pid1),
     erlang:exit(Pid1, kill),
@@ -99,6 +100,77 @@ via3_test() ->
     erlang:exit(Pid3, kill),
     erlang:unlink(Pid4),
     erlang:exit(Pid4, kill),
+    ok.
+
+supervisor_via_test() ->
+    SupViaName = {local, "supervisor group"},
+    MaxR = 5,
+    MaxT = 60,
+    ChildSpecs = [],
+    {ok, SupPid} = supervisor_cpg:start_link(SupViaName,
+                                             MaxR, MaxT, ChildSpecs),
+    erlang:unlink(SupPid),
+    ChildViaName1 = {local, "child group1"},
+    ChildSpecEntry1 = {cpg_test_server1,
+                       {cpg_test_server, start_link, [ChildViaName1]},
+                       permanent, 5000, worker, [cpg_test_server]},
+    {ok, ChildPid1a} = supervisor_cpg:start_child(SupViaName,
+                                                  ChildSpecEntry1),
+    ChildViaName2 = {local, "child group2"},
+    ChildSpecEntry2 = {cpg_test_server2,
+                       {cpg_test_server, start_link, [ChildViaName2]},
+                       permanent, 5000, worker, [cpg_test_server]},
+    {ok, ChildPid2} = supervisor_cpg:start_remote_child(SupViaName,
+                                                        ChildSpecEntry2),
+    ChildViaName3 = {local, "child group3"},
+    ChildSpecEntry3 = {cpg_test_server3,
+                       {cpg_test_server, start_link, [ChildViaName3]},
+                       permanent, 5000, worker, [cpg_test_server]},
+    NomadMaxR = 3,
+    NomadMaxT = 60,
+    {ok, ChildPid3} = supervisor_cpg:start_nomad_child(SupViaName,
+                                                       NomadMaxR,
+                                                       NomadMaxT,
+                                                       ChildSpecEntry3),
+    [{cpg_test_server3, ChildPid3, worker, [cpg_test_server]},
+     {cpg_test_server2, ChildPid2, worker, [cpg_test_server]},
+     {cpg_test_server1, ChildPid1a, worker, [cpg_test_server]}] =
+        supervisor_cpg:which_children(SupViaName),
+    ok = supervisor_cpg:terminate_child(SupViaName,
+                                        cpg_test_server1),
+    ok = supervisor_cpg:terminate_child(SupViaName,
+                                        cpg_test_server1),
+    {ok, ChildPid1b} = supervisor_cpg:restart_child(SupViaName,
+                                                     cpg_test_server1),
+    {cpg_test_server1, ChildPid1b, _, _} =
+        lists:keyfind(cpg_test_server1, 1,
+                      supervisor_cpg:which_children(SupViaName)),
+    erlang:exit(ChildPid1b, kill),
+    timer:sleep(500),
+    {cpg_test_server1, ChildPid1c, _, _} =
+        lists:keyfind(cpg_test_server1, 1,
+                      supervisor_cpg:which_children(SupViaName)),
+    true = is_pid(ChildPid1c),
+    erlang:exit(ChildPid1c, kill),
+    timer:sleep(500),
+    {cpg_test_server1, ChildPid1d, _, _} =
+        lists:keyfind(cpg_test_server1, 1,
+                      supervisor_cpg:which_children(SupViaName)),
+    true = is_pid(ChildPid1d),
+    ok = supervisor_cpg:terminate_child(SupViaName,
+                                        cpg_test_server1),
+    ok = supervisor_cpg:delete_child(SupViaName,
+                                     cpg_test_server1),
+    {error, not_found} = supervisor_cpg:terminate_child(SupViaName,
+                                                        cpg_test_server1),
+    {error, not_found} = supervisor_cpg:delete_child(SupViaName,
+                                                     cpg_test_server1),
+    erlang:exit(ChildPid3, kill),
+    [{active, 1},
+     {specs, 1},
+     {supervisors, 0},
+     {workers, 1}] = lists:sort(supervisor_cpg:count_children(SupViaName)),
+    erlang:exit(SupPid, kill),
     ok.
 
 pid_age_test() ->

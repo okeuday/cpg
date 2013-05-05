@@ -55,29 +55,23 @@ Build
 Example
 -------
 
-    $ erl -sname cpg@localhost -pz deps/quickrand/ebin/ -pz deps/trie/ebin/ -pz ebin/
+    $ erl -sname cpg@localhost -pz ebin/ -pz deps/*/ebin/
     Erlang R16B (erts-5.10.1) [source] [64-bit] [smp:8:8] [async-threads:10] [kernel-poll:false]
 
     Eshell V5.10.1  (abort with ^G)
-    (cpg@localhost)1> application:start(crypto).
+    (cpg@localhost)1> reltool_util:application_start(cpg).
     ok
-    (cpg@localhost)2> application:start(quickrand).
+    (cpg@localhost)2> cpg:join(groups_scope1, "Hello", self()).
     ok
-    (cpg@localhost)3> application:start(trie).
+    (cpg@localhost)3> cpg:join(groups_scope1, "World!", self()).
     ok
-    (cpg@localhost)4> application:start(cpg).
-    ok
-    (cpg@localhost)5> cpg:join(groups_scope1, "Hello", self()).
-    ok
-    (cpg@localhost)6> cpg:join(groups_scope1, "World", self()).
-    ok
-    (cpg@localhost)7> cpg:get_local_members(groups_scope1, "Hello").
-    {ok,"Hello",[<0.39.0>]}
-    (cpg@localhost)8> cpg:get_local_members(groups_scope1, "World").
-    {ok,"World",[<0.39.0>]}
-    (cpg@localhost)9> cpg:which_groups(groups_scope1).
-    ["Hello","World"]
-    (cpg@localhost)10> cpg:which_groups(groups_scope2).
+    (cpg@localhost)4> cpg:get_local_members(groups_scope1, "Hello").
+    {ok,"Hello",[<0.33.0>]}
+    (cpg@localhost)5> cpg:get_local_members(groups_scope1, "World!").
+    {ok,"World!",[<0.33.0>]}
+    (cpg@localhost)6> cpg:which_groups(groups_scope1).
+    ["Hello","World!"]
+    (cpg@localhost)7> cpg:which_groups(groups_scope2).
     []
 
 What does this example mean?  The cpg interface allows you to define groups of
@@ -88,7 +82,7 @@ a group.  The group name is a string (list of integers) due to usage of the trie
 data structure, but that can be changed within the `cpg_constants.hrl` file.
 If the scope is not specified, the default scope is used: `cpg_default_scope`.
 
-In the example, both the process group "Hello" and the process group "World"
+In the example, both the process group "Hello" and the process group "World!"
 are created within the `groups_scope1` scope.  Within both progress groups,
 a single Erlang process is added once.  If more scopes were required, they
 could be created automatically by being provided within the cpg application

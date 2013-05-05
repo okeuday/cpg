@@ -8,7 +8,10 @@
         cpg,
         cpg_app,
         cpg_data,
-        cpg_sup
+        cpg_sup,
+        supervisor_cpg,
+        supervisor_cpg_spawn,
+        supervisor_cpg_sup
         ]},
    {registered,[
         % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
