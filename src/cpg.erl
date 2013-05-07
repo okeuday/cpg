@@ -88,9 +88,21 @@
          get_oldest_pid/1,
          get_oldest_pid/2,
          get_oldest_pid/3,
+         get_local_oldest_pid/1,
+         get_local_oldest_pid/2,
+         get_local_oldest_pid/3,
+         get_remote_oldest_pid/1,
+         get_remote_oldest_pid/2,
+         get_remote_oldest_pid/3,
          get_newest_pid/1,
          get_newest_pid/2,
-         get_newest_pid/3]).
+         get_newest_pid/3,
+         get_local_newest_pid/1,
+         get_local_newest_pid/2,
+         get_local_newest_pid/3,
+         get_remote_newest_pid/1,
+         get_remote_newest_pid/2,
+         get_remote_newest_pid/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
@@ -109,7 +121,11 @@
 
 -type scope() :: atom().
 -type name() :: any(). % GROUP_STORAGE macro controls this
--type via_name() :: {'global', scope(), name(), pos_integer()} |
+-type via_name() :: {'global', scope(), name(), 'random'} |
+                    {'global', scope(), name(), 'oldest'} |
+                    {'global', scope(), name(), pos_integer()} |
+                    {'local', scope(), name(), 'random'} |
+                    {'local', scope(), name(), 'oldest'} |
                     {'local', scope(), name(), pos_integer()} |
                     {'global', scope(), name()} |
                     {'local', scope(), name()} |
@@ -601,6 +617,24 @@ leave(Scope, GroupName, Pid)
 
 -spec whereis_name(via_name()) -> pid() | 'undefined'.
 
+whereis_name({global, Scope, GroupName, random})
+    when is_atom(Scope) ->
+    case get_random_pid(Scope, GroupName) of
+        {ok, _, Pid} ->
+            Pid;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({global, Scope, GroupName, oldest})
+    when is_atom(Scope) ->
+    case get_oldest_pid(Scope, GroupName) of
+        {ok, _, Pid} ->
+            Pid;
+        {error, _} ->
+            undefined
+    end;
+
 whereis_name({global, Scope, GroupName, Instances})
     when is_atom(Scope), is_integer(Instances), Instances > 0 ->
     case get_members(Scope, GroupName) of
@@ -610,8 +644,26 @@ whereis_name({global, Scope, GroupName, Instances})
                 Count < Instances ->
                     undefined;
                 true ->
-                    whereis_name_pick(Count, Pids)
+                    whereis_name_random(Count, Pids)
             end;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({local, Scope, GroupName, random})
+    when is_atom(Scope) ->
+    case get_local_pid(Scope, GroupName) of
+        {ok, _, Pid} ->
+            Pid;
+        {error, _} ->
+            undefined
+    end;
+
+whereis_name({local, Scope, GroupName, oldest})
+    when is_atom(Scope) ->
+    case get_local_oldest_pid(Scope, GroupName) of
+        {ok, _, Pid} ->
+            Pid;
         {error, _} ->
             undefined
     end;
@@ -625,7 +677,7 @@ whereis_name({local, Scope, GroupName, Instances})
                 Count < Instances ->
                     undefined;
                 true ->
-                    whereis_name_pick(Count, Pids)
+                    whereis_name_random(Count, Pids)
             end;
         {error, _} ->
             undefined
@@ -658,7 +710,7 @@ whereis_name({global, GroupName, Instances})
                 Count < Instances ->
                     undefined;
                 true ->
-                    whereis_name_pick(Count, Pids)
+                    whereis_name_random(Count, Pids)
             end;
         {error, _} ->
             undefined
@@ -673,7 +725,7 @@ whereis_name({local, GroupName, Instances})
                 Count < Instances ->
                     undefined;
                 true ->
-                    whereis_name_pick(Count, Pids)
+                    whereis_name_random(Count, Pids)
             end;
         {error, _} ->
             undefined
@@ -688,7 +740,7 @@ whereis_name({Scope, GroupName, Instances})
                 Count < Instances ->
                     undefined;
                 true ->
-                    whereis_name_pick(Count, Pids)
+                    whereis_name_random(Count, Pids)
             end;
         {error, _} ->
             undefined
@@ -729,7 +781,7 @@ whereis_name({GroupName, Instances})
                 Count < Instances ->
                     undefined;
                 true ->
-                    whereis_name_pick(Count, Pids)
+                    whereis_name_random(Count, Pids)
             end;
         {error, _} ->
             undefined
@@ -753,6 +805,17 @@ whereis_name(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec register_name(via_name(), pid()) -> 'yes' | 'no'.
+
+register_name({RegistrationType, Scope, GroupName, Lookup}, Pid)
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local), is_atom(Scope),
+         (Lookup =:= random orelse Lookup =:= oldest) ->
+    case join(Scope, GroupName, Pid) of
+        ok ->
+            yes;
+        error ->
+            no
+    end;
 
 register_name({RegistrationType, Scope, GroupName, Instances}, Pid)
     when (RegistrationType =:= global orelse
@@ -831,6 +894,12 @@ register_name(GroupName, Pid) ->
 %%-------------------------------------------------------------------------
 
 -spec unregister_name(via_name()) -> 'ok' | 'error'.
+
+unregister_name({RegistrationType, Scope, GroupName, Lookup})
+    when (RegistrationType =:= global orelse
+          RegistrationType =:= local), is_atom(Scope),
+         (Lookup =:= random orelse Lookup =:= oldest) ->
+    leave(Scope, GroupName, self());
 
 unregister_name({RegistrationType, Scope, GroupName, Instances})
     when (RegistrationType =:= global orelse
@@ -1557,6 +1626,152 @@ get_oldest_pid(Scope, GroupName, Exclude)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Get the oldest local group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_oldest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_local_oldest_pid(GroupName) ->
+    cpg_data:get_local_oldest_pid(GroupName,
+                                  cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_local_oldest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_oldest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest local group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_oldest_pid(name() | scope(), pid() | name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_local_oldest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    cpg_data:get_local_oldest_pid(GroupName, Exclude,
+                                  cpg_ets:get(?DEFAULT_SCOPE));
+
+get_local_oldest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    cpg_data:get_local_oldest_pid(GroupName,
+                                  cpg_ets:get(Scope)).
+-else.
+get_local_oldest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_oldest_pid, GroupName, Exclude});
+
+get_local_oldest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_oldest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest local group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_oldest_pid(scope(), name(), pid()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_local_oldest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    cpg_data:get_local_oldest_pid(GroupName, Exclude,
+                                  cpg_ets:get(Scope)).
+-else.
+get_local_oldest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_local_oldest_pid, GroupName, Exclude}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest remote group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_oldest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_remote_oldest_pid(GroupName) ->
+    cpg_data:get_remote_oldest_pid(GroupName,
+                                   cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_remote_oldest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_oldest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest remote group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_oldest_pid(name() | scope(), pid() | name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_remote_oldest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    cpg_data:get_remote_oldest_pid(GroupName, Exclude,
+                                   cpg_ets:get(?DEFAULT_SCOPE));
+
+get_remote_oldest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    cpg_data:get_remote_oldest_pid(GroupName,
+                                   cpg_ets:get(Scope)).
+-else.
+get_remote_oldest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_oldest_pid, GroupName, Exclude});
+
+get_remote_oldest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_oldest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest remote group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_oldest_pid(scope(), name(), pid()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_remote_oldest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    cpg_data:get_remote_oldest_pid(GroupName, Exclude,
+                                   cpg_ets:get(Scope)).
+-else.
+get_remote_oldest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_remote_oldest_pid, GroupName, Exclude}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get the newest group member.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -1625,6 +1840,152 @@ get_newest_pid(Scope, GroupName, Exclude)
 get_newest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_newest_pid, GroupName, Exclude}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest local group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_newest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_local_newest_pid(GroupName) ->
+    cpg_data:get_local_newest_pid(GroupName,
+                                  cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_local_newest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_newest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest local group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_newest_pid(name() | scope(), pid() | name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_local_newest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    cpg_data:get_local_newest_pid(GroupName, Exclude,
+                                  cpg_ets:get(?DEFAULT_SCOPE));
+
+get_local_newest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    cpg_data:get_local_newest_pid(GroupName,
+                                  cpg_ets:get(Scope)).
+-else.
+get_local_newest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_newest_pid, GroupName, Exclude});
+
+get_local_newest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_newest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest local group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_newest_pid(scope(), name(), pid()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_local_newest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    cpg_data:get_local_newest_pid(GroupName, Exclude,
+                                  cpg_ets:get(Scope)).
+-else.
+get_local_newest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_local_newest_pid, GroupName, Exclude}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest remote group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_newest_pid(name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_remote_newest_pid(GroupName) ->
+    cpg_data:get_remote_newest_pid(GroupName,
+                                   cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_remote_newest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_newest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest remote group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_newest_pid(name() | scope(), pid() | name()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_remote_newest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    cpg_data:get_remote_newest_pid(GroupName, Exclude,
+                                   cpg_ets:get(?DEFAULT_SCOPE));
+
+get_remote_newest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    cpg_data:get_remote_newest_pid(GroupName,
+                                   cpg_ets:get(Scope)).
+-else.
+get_remote_newest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_newest_pid, GroupName, Exclude});
+
+get_remote_newest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_newest_pid, GroupName}).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest remote group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_newest_pid(scope(), name(), pid()) ->
+    {ok, name(), pid()} | {'error', gcp_error_reason()}.
+
+-ifdef(CPG_ETS_CACHE).
+get_remote_newest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    cpg_data:get_remote_newest_pid(GroupName, Exclude,
+                                   cpg_ets:get(Scope)).
+-else.
+get_remote_newest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_remote_newest_pid, GroupName, Exclude}).
 -endif.
 
 %%%------------------------------------------------------------------------
@@ -1766,6 +2127,22 @@ handle_call({get_oldest_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_oldest_pid(GroupName, Exclude, Groups), State};
 
+handle_call({get_local_oldest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_oldest_pid(GroupName, Groups), State};
+
+handle_call({get_local_oldest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_oldest_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_remote_oldest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_oldest_pid(GroupName, Groups), State};
+
+handle_call({get_remote_oldest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_oldest_pid(GroupName, Exclude, Groups), State};
+
 handle_call({get_newest_pid, GroupName}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_newest_pid(GroupName, Groups), State};
@@ -1773,6 +2150,22 @@ handle_call({get_newest_pid, GroupName}, _,
 handle_call({get_newest_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_newest_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_local_newest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_newest_pid(GroupName, Groups), State};
+
+handle_call({get_local_newest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_newest_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_remote_newest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_newest_pid(GroupName, Groups), State};
+
+handle_call({get_remote_newest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_newest_pid(GroupName, Exclude, Groups), State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -2157,9 +2550,9 @@ check_multi_call_replies([{_, ok} | Replies]) ->
 check_multi_call_replies([{_, Result} | _]) ->
     Result.
 
-whereis_name_pick(1, [Pid]) ->
+whereis_name_random(1, [Pid]) ->
     Pid;
-whereis_name_pick(N, L) ->
+whereis_name_random(N, L) ->
     lists:nth(random(N), L).
 
 delete_all(Elem, List) when is_list(List) ->
