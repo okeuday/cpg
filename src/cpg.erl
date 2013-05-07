@@ -43,8 +43,6 @@
 
 -behaviour(gen_server).
 
--include("cpg_constants.hrl").
-
 %% external interface
 -export([start_link/0,
          start_link/1,
@@ -98,6 +96,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          code_change/3, terminate/2]).
 
+-include("cpg_constants.hrl").
 -include("cpg_data.hrl").
 -include("logging.hrl").
 
@@ -122,6 +121,15 @@
                     {name(), pos_integer()} |
                     name(). % for OTP behaviors
 -export_type([scope/0, name/0, via_name/0]).
+
+-compile({nowarn_unused_function,
+          [{fake_put, 2}]}).
+
+-ifdef(CPG_ETS_CACHE).
+-define(CPG_ETS_CACHE_PUT(G), cpg_ets:put(Scope, G)).
+-else.
+-define(CPG_ETS_CACHE_PUT(G), fake_put(Scope, G)).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -871,8 +879,15 @@ unregister_name(GroupName) ->
 
 -spec get_members(name()) -> get_members_ret().
    
+-ifdef(CPG_ETS_CACHE).
 get_members(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName}).
+    cpg_data:get_members(GroupName,
+                         cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_members(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_members, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -882,14 +897,28 @@ get_members(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_members(name() | scope(), pid() | name()) -> get_members_ret().
-   
+
+-ifdef(CPG_ETS_CACHE).
 get_members(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_members, GroupName, Exclude});
+    cpg_data:get_members(GroupName, Exclude,
+                         cpg_ets:get(?DEFAULT_SCOPE));
 
 get_members(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_members, GroupName}).
+    cpg_data:get_members(GroupName,
+                         cpg_ets:get(Scope)).
+-else.
+get_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_members, GroupName, Exclude});
+
+get_members(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_members, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -900,9 +929,17 @@ get_members(Scope, GroupName)
 
 -spec get_members(scope(), name(), pid()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_members, GroupName, Exclude}).
+    cpg_data:get_members(GroupName, Exclude,
+                         cpg_ets:get(Scope)).
+-else.
+get_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_members, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -912,8 +949,15 @@ get_members(Scope, GroupName, Exclude)
 
 -spec get_local_members(name()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_local_members(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName}).
+    cpg_data:get_local_members(GroupName,
+                               cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_local_members(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_members, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -924,13 +968,27 @@ get_local_members(GroupName) ->
 
 -spec get_local_members(name() | scope(), pid() | name()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_local_members(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName, Exclude});
+    cpg_data:get_local_members(GroupName, Exclude,
+                               cpg_ets:get(?DEFAULT_SCOPE));
 
 get_local_members(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_local_members, GroupName}).
+    cpg_data:get_local_members(GroupName,
+                               cpg_ets:get(Scope)).
+-else.
+get_local_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_members, GroupName, Exclude});
+
+get_local_members(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_members, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -941,9 +999,17 @@ get_local_members(Scope, GroupName)
 
 -spec get_local_members(scope(), name(), pid()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_local_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_local_members, GroupName, Exclude}).
+    cpg_data:get_local_members(GroupName, Exclude,
+                               cpg_ets:get(Scope)).
+-else.
+get_local_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_local_members, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -953,8 +1019,15 @@ get_local_members(Scope, GroupName, Exclude)
 
 -spec get_remote_members(name()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_remote_members(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_remote_members, GroupName}).
+    cpg_data:get_remote_members(GroupName,
+                                cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_remote_members(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_members, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -965,13 +1038,27 @@ get_remote_members(GroupName) ->
 
 -spec get_remote_members(name() | scope(), pid() | name()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_remote_members(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_remote_members, GroupName, Exclude});
+    cpg_data:get_remote_members(GroupName, Exclude,
+                                cpg_ets:get(?DEFAULT_SCOPE));
 
 get_remote_members(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_remote_members, GroupName}).
+    cpg_data:get_remote_members(GroupName,
+                                cpg_ets:get(Scope)).
+-else.
+get_remote_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_members, GroupName, Exclude});
+
+get_remote_members(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_members, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -982,9 +1069,17 @@ get_remote_members(Scope, GroupName)
 
 -spec get_remote_members(scope(), name(), pid()) -> get_members_ret().
 
+-ifdef(CPG_ETS_CACHE).
 get_remote_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_remote_members, GroupName, Exclude}).
+    cpg_data:get_remote_members(GroupName, Exclude,
+                                cpg_ets:get(Scope)).
+-else.
+get_remote_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_remote_members, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -994,8 +1089,14 @@ get_remote_members(Scope, GroupName, Exclude)
 
 -spec which_groups() -> [name()].
 
+-ifdef(CPG_ETS_CACHE).
 which_groups() ->
-    gen_server:call(?DEFAULT_SCOPE, which_groups).
+    cpg_data:which_groups(cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+which_groups() ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    which_groups).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1005,9 +1106,16 @@ which_groups() ->
 
 -spec which_groups(scope()) -> [name()].
 
+-ifdef(CPG_ETS_CACHE).
 which_groups(Scope)
     when is_atom(Scope) ->
-    gen_server:call(Scope, which_groups).
+    cpg_data:which_groups(cpg_ets:get(Scope)).
+-else.
+which_groups(Scope)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    which_groups).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1018,8 +1126,15 @@ which_groups(Scope)
 -spec get_closest_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_closest_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName}).
+    cpg_data:get_closest_pid(GroupName,
+                             cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_closest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_closest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1031,13 +1146,27 @@ get_closest_pid(GroupName) ->
 -spec get_closest_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_closest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_closest_pid, GroupName, Exclude});
+    cpg_data:get_closest_pid(GroupName, Exclude,
+                             cpg_ets:get(?DEFAULT_SCOPE));
 
 get_closest_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_closest_pid, GroupName}).
+    cpg_data:get_closest_pid(GroupName,
+                             cpg_ets:get(Scope)).
+-else.
+get_closest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_closest_pid, GroupName, Exclude});
+
+get_closest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_closest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1049,9 +1178,17 @@ get_closest_pid(Scope, GroupName)
 -spec get_closest_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_closest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_closest_pid, GroupName, Exclude}).
+    cpg_data:get_closest_pid(GroupName, Exclude,
+                             cpg_ets:get(Scope)).
+-else.
+get_closest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_closest_pid, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1062,8 +1199,15 @@ get_closest_pid(Scope, GroupName, Exclude)
 -spec get_furthest_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_furthest_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_furthest_pid, GroupName}).
+    cpg_data:get_furthest_pid(GroupName,
+                              cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_furthest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_furthest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1075,13 +1219,27 @@ get_furthest_pid(GroupName) ->
 -spec get_furthest_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_furthest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_furthest_pid, GroupName, Exclude});
+    cpg_data:get_furthest_pid(GroupName, Exclude,
+                              cpg_ets:get(?DEFAULT_SCOPE));
 
 get_furthest_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_furthest_pid, GroupName}).
+    cpg_data:get_furthest_pid(GroupName,
+                              cpg_ets:get(Scope)).
+-else.
+get_furthest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_furthest_pid, GroupName, Exclude});
+
+get_furthest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_furthest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1093,9 +1251,17 @@ get_furthest_pid(Scope, GroupName)
 -spec get_furthest_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_furthest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_furthest_pid, GroupName, Exclude}).
+    cpg_data:get_furthest_pid(GroupName, Exclude,
+                              cpg_ets:get(Scope)).
+-else.
+get_furthest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_furthest_pid, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1106,8 +1272,15 @@ get_furthest_pid(Scope, GroupName, Exclude)
 -spec get_random_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_random_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName}).
+    cpg_data:get_random_pid(GroupName,
+                            cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_random_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_random_pid, GroupName}).
+-endif.
 
 -spec get_random_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
@@ -1119,13 +1292,27 @@ get_random_pid(GroupName) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(CPG_ETS_CACHE).
 get_random_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_random_pid, GroupName, Exclude});
+    cpg_data:get_random_pid(GroupName, Exclude,
+                            cpg_ets:get(?DEFAULT_SCOPE));
 
 get_random_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_random_pid, GroupName}).
+    cpg_data:get_random_pid(GroupName,
+                            cpg_ets:get(Scope)).
+-else.
+get_random_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_random_pid, GroupName, Exclude});
+
+get_random_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_random_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1137,9 +1324,17 @@ get_random_pid(Scope, GroupName)
 -spec get_random_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_random_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_random_pid, GroupName, Exclude}).
+    cpg_data:get_random_pid(GroupName, Exclude,
+                            cpg_ets:get(Scope)).
+-else.
+get_random_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_random_pid, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1150,8 +1345,15 @@ get_random_pid(Scope, GroupName, Exclude)
 -spec get_local_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_local_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_local_pid, GroupName}).
+    cpg_data:get_local_pid(GroupName,
+                           cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_local_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1163,13 +1365,27 @@ get_local_pid(GroupName) ->
 -spec get_local_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_local_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_local_pid, GroupName, Exclude});
+    cpg_data:get_local_pid(GroupName, Exclude,
+                           cpg_ets:get(?DEFAULT_SCOPE));
 
 get_local_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_local_pid, GroupName}).
+    cpg_data:get_local_pid(GroupName,
+                           cpg_ets:get(Scope)).
+-else.
+get_local_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_pid, GroupName, Exclude});
+
+get_local_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1181,9 +1397,17 @@ get_local_pid(Scope, GroupName)
 -spec get_local_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_local_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_local_pid, GroupName, Exclude}).
+    cpg_data:get_local_pid(GroupName, Exclude,
+                           cpg_ets:get(Scope)).
+-else.
+get_local_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_local_pid, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1194,8 +1418,15 @@ get_local_pid(Scope, GroupName, Exclude)
 -spec get_remote_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_remote_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_remote_pid, GroupName}).
+    cpg_data:get_remote_pid(GroupName,
+                            cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_remote_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1207,13 +1438,27 @@ get_remote_pid(GroupName) ->
 -spec get_remote_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_remote_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_remote_pid, GroupName, Exclude});
+    cpg_data:get_remote_pid(GroupName, Exclude,
+                            cpg_ets:get(?DEFAULT_SCOPE));
 
 get_remote_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_remote_pid, GroupName}).
+    cpg_data:get_remote_pid(GroupName,
+                            cpg_ets:get(Scope)).
+-else.
+get_remote_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_pid, GroupName, Exclude});
+
+get_remote_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1225,9 +1470,17 @@ get_remote_pid(Scope, GroupName)
 -spec get_remote_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_remote_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_remote_pid, GroupName, Exclude}).
+    cpg_data:get_remote_pid(GroupName, Exclude,
+                            cpg_ets:get(Scope)).
+-else.
+get_remote_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_remote_pid, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1238,8 +1491,15 @@ get_remote_pid(Scope, GroupName, Exclude)
 -spec get_oldest_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_oldest_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_oldest_pid, GroupName}).
+    cpg_data:get_oldest_pid(GroupName,
+                            cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_oldest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_oldest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1251,13 +1511,27 @@ get_oldest_pid(GroupName) ->
 -spec get_oldest_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_oldest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_oldest_pid, GroupName, Exclude});
+    cpg_data:get_oldest_pid(GroupName, Exclude,
+                            cpg_ets:get(?DEFAULT_SCOPE));
 
 get_oldest_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_oldest_pid, GroupName}).
+    cpg_data:get_oldest_pid(GroupName,
+                            cpg_ets:get(Scope)).
+-else.
+get_oldest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_oldest_pid, GroupName, Exclude});
+
+get_oldest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_oldest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1269,9 +1543,17 @@ get_oldest_pid(Scope, GroupName)
 -spec get_oldest_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_oldest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
-    gen_server:call(Scope, {get_oldest_pid, GroupName, Exclude}).
+    cpg_data:get_oldest_pid(GroupName, Exclude,
+                            cpg_ets:get(Scope)).
+-else.
+get_oldest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope,
+                    {get_oldest_pid, GroupName, Exclude}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1282,8 +1564,15 @@ get_oldest_pid(Scope, GroupName, Exclude)
 -spec get_newest_pid(name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_newest_pid(GroupName) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_newest_pid, GroupName}).
+    cpg_data:get_newest_pid(GroupName,
+                            cpg_ets:get(?DEFAULT_SCOPE)).
+-else.
+get_newest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_newest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1295,13 +1584,27 @@ get_newest_pid(GroupName) ->
 -spec get_newest_pid(name() | scope(), pid() | name()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
 get_newest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
-    gen_server:call(?DEFAULT_SCOPE, {get_newest_pid, GroupName, Exclude});
+    cpg_data:get_newest_pid(GroupName, Exclude,
+                            cpg_ets:get(?DEFAULT_SCOPE));
 
 get_newest_pid(Scope, GroupName)
     when is_atom(Scope) ->
-    gen_server:call(Scope, {get_newest_pid, GroupName}).
+    cpg_data:get_newest_pid(GroupName,
+                            cpg_ets:get(Scope)).
+-else.
+get_newest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_newest_pid, GroupName, Exclude});
+
+get_newest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_newest_pid, GroupName}).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1313,9 +1616,16 @@ get_newest_pid(Scope, GroupName)
 -spec get_newest_pid(scope(), name(), pid()) ->
     {ok, name(), pid()} | {'error', gcp_error_reason()}.
 
+-ifdef(CPG_ETS_CACHE).
+get_newest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    cpg_data:get_newest_pid(GroupName, Exclude,
+                            cpg_ets:get(Scope)).
+-else.
 get_newest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_newest_pid, GroupName, Exclude}).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -1338,7 +1648,8 @@ init([Scope]) ->
                           %self() ! {nodeup, N} % pg2 does this
                   end, Ns),
     quickrand:seed(),
-    {ok, #state{scope = Scope}}.
+    {ok, #state{scope = Scope,
+                groups = ?CPG_ETS_CACHE_PUT(cpg_data:get_empty_groups())}}.
 
 %% @private
 %% @doc
@@ -1530,19 +1841,22 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-create_group(GroupName, #state{groups = Groups} = State) ->
+create_group(GroupName, #state{scope = Scope,
+                               groups = Groups} = State) ->
     NewGroups = ?GROUP_STORAGE:update(GroupName,
         fun(OldValue) -> OldValue end, #cpg_data{}, Groups),
-    State#state{groups = NewGroups}.
+    State#state{groups = ?CPG_ETS_CACHE_PUT(NewGroups)}.
 
-delete_group(GroupName, #state{groups = Groups,
+delete_group(GroupName, #state{scope = Scope,
+                               groups = Groups,
                                pids = Pids} = State) ->
     case ?GROUP_STORAGE:find(GroupName, Groups) of
         error ->
             State;
         {ok, #cpg_data{local_count = 0,
                        remote_count = 0}} ->
-            State#state{groups = ?GROUP_STORAGE:erase(GroupName, Groups)};
+            NewGroups = ?GROUP_STORAGE:erase(GroupName, Groups),
+            State#state{groups = ?CPG_ETS_CACHE_PUT(NewGroups)};
         {ok, #cpg_data{local = Local,
                        remote = Remote}} ->
             NewPids = lists:foldl(fun(#cpg_data_pid{pid = Pid,
@@ -1553,11 +1867,13 @@ delete_group(GroupName, #state{groups = Groups,
                                 lists:delete(GroupName, OldValue)
                             end, P)
             end, Pids, Local ++ Remote),
-            State#state{groups = ?GROUP_STORAGE:erase(GroupName, Groups),
+            NewGroups = ?GROUP_STORAGE:erase(GroupName, Groups),
+            State#state{groups = ?CPG_ETS_CACHE_PUT(NewGroups),
                         pids = NewPids}
     end.
 
-join_group(GroupName, Pid, #state{groups = Groups,
+join_group(GroupName, Pid, #state{scope = Scope,
+                                  groups = Groups,
                                   pids = Pids} = State) ->
     Entry = #cpg_data_pid{pid = Pid,
                           monitor = erlang:monitor(process, Pid)},
@@ -1595,10 +1911,11 @@ join_group(GroupName, Pid, #state{groups = Groups,
                               lists:umerge(OldValue, GroupNameList)
                           end,
                           GroupNameList, Pids),
-    State#state{groups = NewGroups,
+    State#state{groups = ?CPG_ETS_CACHE_PUT(NewGroups),
                 pids = NewPids}.
 
-leave_group(GroupName, Pid, #state{groups = Groups,
+leave_group(GroupName, Pid, #state{scope = Scope,
+                                   groups = Groups,
                                    pids = Pids} = State) ->
     Fpartition = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
         if 
@@ -1640,7 +1957,7 @@ leave_group(GroupName, Pid, #state{groups = Groups,
                               lists:delete(GroupName, OldValue)
                           end,
                           Pids),
-    State#state{groups = NewGroups,
+    State#state{groups = ?CPG_ETS_CACHE_PUT(NewGroups),
                 pids = NewPids}.
 
 store_conflict_add_entries(0, Entries, _) ->
@@ -1784,7 +2101,8 @@ store_new_group([#cpg_data_pid{pid = Pid} = E | OldEntries],
 
 store(#state{groups = ExternalGroups,
              pids = ExternalPids},
-      #state{groups = Groups,
+      #state{scope = Scope,
+             groups = Groups,
              pids = Pids} = State) ->
     % V1 is external
     % V2 is internal
@@ -1809,7 +2127,7 @@ store(#state{groups = ExternalGroups,
     NewPids = dict:merge(fun(_, V1, V2) ->
                              lists:umerge(V2, V1)
                          end, ExternalPids, Pids),
-    State#state{groups = NewGroups,
+    State#state{groups = ?CPG_ETS_CACHE_PUT(NewGroups),
                 pids = NewPids}.
 
 member_died(Pid, #state{pids = Pids} = State) ->
@@ -1857,4 +2175,8 @@ delete_all(_, L, []) ->
 
 random(N) ->
     quickrand:uniform(N).
+
+fake_put(Scope, G)
+    when is_atom(Scope) ->
+    G.
 
