@@ -59,6 +59,7 @@
          whereis_name/1,
          register_name/2,
          unregister_name/1,
+         send/2,
          get_members/1,
          get_members/2,
          get_members/3,
@@ -933,6 +934,25 @@ unregister_name({GroupName, Instances})
 
 unregister_name(GroupName) ->
     leave(?DEFAULT_SCOPE, GroupName, self()).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function to provide via process registration functionality.===
+%% Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+%% process registration (instead of {local, atom()} or {global, atom()})
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send(via_name(), any()) -> pid().
+
+send(ViaName, Msg) ->
+    case whereis_name(ViaName) of
+        undefined ->
+            erlang:exit({badarg, {ViaName, Msg}});
+        Pid when is_pid(Pid) ->
+            Pid ! Msg,
+            Pid
+    end.
 
 -type get_members_ret() ::
     {ok, name(), list(pid())} | {'error', {'no_such_group', name()}}.
