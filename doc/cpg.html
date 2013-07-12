@@ -16,7 +16,7 @@
    (lib/kernel-x.x.x/src/pg2.erl).
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.5 Jul 11 2013 17:32:17
+<p><b>Version:</b> 1.2.5 Jul 11 2013 19:11:32
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -436,7 +436,7 @@
 
 <h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -464,7 +464,7 @@
 
 <h3 class="function"><a name="get_furthest_pid-2">get_furthest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -492,7 +492,7 @@
 
 <h3 class="function"><a name="get_local_members-2">get_local_members/2</a></h3>
 <div class="spec">
-<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the local members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -520,7 +520,7 @@
 
 <h3 class="function"><a name="get_local_newest_pid-2">get_local_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -548,7 +548,7 @@
 
 <h3 class="function"><a name="get_local_oldest_pid-2">get_local_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -576,7 +576,7 @@
 
 <h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -604,7 +604,7 @@
 
 <h3 class="function"><a name="get_members-2">get_members/2</a></h3>
 <div class="spec">
-<p><tt>get_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+<p><tt>get_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -632,7 +632,7 @@
 
 <h3 class="function"><a name="get_newest_pid-2">get_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -660,7 +660,7 @@
 
 <h3 class="function"><a name="get_oldest_pid-2">get_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -688,7 +688,7 @@
 
 <h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -716,7 +716,7 @@
 
 <h3 class="function"><a name="get_remote_members-2">get_remote_members/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the remote members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -744,7 +744,7 @@
 
 <h3 class="function"><a name="get_remote_newest_pid-2">get_remote_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -772,7 +772,7 @@
 
 <h3 class="function"><a name="get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -800,7 +800,7 @@
 
 <h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -1024,6 +1024,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jul 11 2013, 17:32:17.</i></p>
+<p><i>Generated by EDoc, Jul 11 2013, 19:11:32.</i></p>
 </body>
 </html>

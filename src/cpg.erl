@@ -1026,7 +1026,8 @@ send(ViaName, Msg) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_members(name()) -> get_members_ret().
+-spec get_members(name()) ->
+    get_members_ret().
 
 get_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1040,7 +1041,8 @@ get_members(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_members(name() | scope(),
-                  pid() | name()) -> get_members_ret().
+                  pid() | name() | pos_integer() | infinity) ->
+    get_members_ret().
 
 get_members(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1050,7 +1052,12 @@ get_members(GroupName, Exclude)
 get_members(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_members, GroupName}).
+                    {get_members, GroupName});
+
+get_members(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_members, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1061,7 +1068,8 @@ get_members(Scope, GroupName)
 
 -spec get_members(scope() | name(),
                   name() | pid(),
-                  pid() | pos_integer() | infinity) -> get_members_ret().
+                  pid() | pos_integer() | infinity) ->
+    get_members_ret().
 
 get_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1084,7 +1092,8 @@ get_members(GroupName, Exclude, Timeout)
 -spec get_members(scope(),
                   name(),
                   pid(),
-                  pos_integer() | infinity) -> get_members_ret().
+                  pos_integer() | infinity) ->
+    get_members_ret().
 
 get_members(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1098,7 +1107,8 @@ get_members(Scope, GroupName, Exclude, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_local_members(name()) -> get_members_ret().
+-spec get_local_members(name()) ->
+    get_members_ret().
 
 get_local_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1112,7 +1122,8 @@ get_local_members(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_local_members(name() | scope(),
-                        pid() | name()) -> get_members_ret().
+                        pid() | name() | pos_integer() | infinity) ->
+    get_members_ret().
 
 get_local_members(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1122,7 +1133,12 @@ get_local_members(GroupName, Exclude)
 get_local_members(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_local_members, GroupName}).
+                    {get_local_members, GroupName});
+
+get_local_members(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_members, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1133,7 +1149,8 @@ get_local_members(Scope, GroupName)
 
 -spec get_local_members(scope() | name(),
                         name() | pid(),
-                        pid() | pos_integer() | infinity) -> get_members_ret().
+                        pid() | pos_integer() | infinity) ->
+    get_members_ret().
 
 get_local_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1156,7 +1173,8 @@ get_local_members(GroupName, Exclude, Timeout)
 -spec get_local_members(scope(),
                         name(),
                         pid(),
-                        pos_integer() | infinity) -> get_members_ret().
+                        pos_integer() | infinity) ->
+    get_members_ret().
 
 get_local_members(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1170,7 +1188,8 @@ get_local_members(Scope, GroupName, Exclude, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_remote_members(name()) -> get_members_ret().
+-spec get_remote_members(name()) ->
+    get_members_ret().
 
 get_remote_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1184,7 +1203,8 @@ get_remote_members(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_remote_members(name() | scope(),
-                         pid() | name()) -> get_members_ret().
+                         pid() | name() | pos_integer() | infinity) ->
+    get_members_ret().
 
 get_remote_members(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1194,7 +1214,12 @@ get_remote_members(GroupName, Exclude)
 get_remote_members(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_remote_members, GroupName}).
+                    {get_remote_members, GroupName});
+
+get_remote_members(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_members, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1205,7 +1230,8 @@ get_remote_members(Scope, GroupName)
 
 -spec get_remote_members(scope() | name(),
                          name() | pid(),
-                         pid() | pos_integer() | infinity) -> get_members_ret().
+                         pid() | pos_integer() | infinity) ->
+    get_members_ret().
 
 get_remote_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1228,7 +1254,8 @@ get_remote_members(GroupName, Exclude, Timeout)
 -spec get_remote_members(scope(),
                          name(),
                          pid(),
-                         pos_integer() | infinity) -> get_members_ret().
+                         pos_integer() | infinity) ->
+    get_members_ret().
 
 get_remote_members(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1242,7 +1269,8 @@ get_remote_members(Scope, GroupName, Exclude, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec which_groups() -> [name()].
+-spec which_groups() ->
+    [name()].
 
 which_groups() ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1254,7 +1282,8 @@ which_groups() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec which_groups(scope() | pos_integer() | infinity) -> [name()].
+-spec which_groups(scope() | pos_integer() | infinity) ->
+    [name()].
 
 which_groups(Scope)
     when is_atom(Scope) ->
@@ -1273,7 +1302,8 @@ which_groups(Timeout) ->
 %%-------------------------------------------------------------------------
 
 -spec which_groups(scope(),
-                   pos_integer() | infinity) -> [name()].
+                   pos_integer() | infinity) ->
+    [name()].
 
 which_groups(Scope, Timeout)
     when is_atom(Scope) ->
@@ -1303,7 +1333,7 @@ get_closest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_closest_pid(name() | scope(),
-                      pid() | name()) ->
+                      pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1315,7 +1345,12 @@ get_closest_pid(GroupName, Exclude)
 get_closest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_closest_pid, GroupName}).
+                    {get_closest_pid, GroupName});
+
+get_closest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_closest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1383,7 +1418,7 @@ get_furthest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_furthest_pid(name() | scope(),
-                       pid() | name()) ->
+                       pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1395,7 +1430,12 @@ get_furthest_pid(GroupName, Exclude)
 get_furthest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_furthest_pid, GroupName}).
+                    {get_furthest_pid, GroupName});
+
+get_furthest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_furthest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1463,7 +1503,7 @@ get_random_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_random_pid(name() | scope(),
-                     pid() | name()) ->
+                     pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1475,7 +1515,12 @@ get_random_pid(GroupName, Exclude)
 get_random_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_random_pid, GroupName}).
+                    {get_random_pid, GroupName});
+
+get_random_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_random_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1543,7 +1588,7 @@ get_local_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_local_pid(name() | scope(),
-                    pid() | name()) ->
+                    pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1555,7 +1600,12 @@ get_local_pid(GroupName, Exclude)
 get_local_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_local_pid, GroupName}).
+                    {get_local_pid, GroupName});
+
+get_local_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1623,7 +1673,7 @@ get_remote_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_remote_pid(name() | scope(),
-                     pid() | name()) ->
+                     pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1635,7 +1685,12 @@ get_remote_pid(GroupName, Exclude)
 get_remote_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_remote_pid, GroupName}).
+                    {get_remote_pid, GroupName});
+
+get_remote_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1703,7 +1758,7 @@ get_oldest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_oldest_pid(name() | scope(),
-                     pid() | name()) ->
+                     pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1715,7 +1770,12 @@ get_oldest_pid(GroupName, Exclude)
 get_oldest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_oldest_pid, GroupName}).
+                    {get_oldest_pid, GroupName});
+
+get_oldest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_oldest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1783,7 +1843,7 @@ get_local_oldest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_local_oldest_pid(name() | scope(),
-                           pid() | name()) ->
+                           pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1795,7 +1855,12 @@ get_local_oldest_pid(GroupName, Exclude)
 get_local_oldest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_local_oldest_pid, GroupName}).
+                    {get_local_oldest_pid, GroupName});
+
+get_local_oldest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_oldest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1863,7 +1928,7 @@ get_remote_oldest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_remote_oldest_pid(name() | scope(),
-                            pid() | name()) ->
+                            pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1875,7 +1940,12 @@ get_remote_oldest_pid(GroupName, Exclude)
 get_remote_oldest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_remote_oldest_pid, GroupName}).
+                    {get_remote_oldest_pid, GroupName});
+
+get_remote_oldest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_oldest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1943,7 +2013,7 @@ get_newest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_newest_pid(name() | scope(),
-                     pid() | name()) ->
+                     pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -1955,7 +2025,12 @@ get_newest_pid(GroupName, Exclude)
 get_newest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_newest_pid, GroupName}).
+                    {get_newest_pid, GroupName});
+
+get_newest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_newest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2023,7 +2098,7 @@ get_local_newest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_local_newest_pid(name() | scope(),
-                           pid() | name()) ->
+                           pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -2035,7 +2110,12 @@ get_local_newest_pid(GroupName, Exclude)
 get_local_newest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_local_newest_pid, GroupName}).
+                    {get_local_newest_pid, GroupName});
+
+get_local_newest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_local_newest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2103,7 +2183,7 @@ get_remote_newest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec get_remote_newest_pid(name() | scope(),
-                            pid() | name()) ->
+                            pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
     {error, gcp_error_reason()}.
 
@@ -2115,7 +2195,12 @@ get_remote_newest_pid(GroupName, Exclude)
 get_remote_newest_pid(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope,
-                    {get_remote_newest_pid, GroupName}).
+                    {get_remote_newest_pid, GroupName});
+
+get_remote_newest_pid(GroupName, Timeout) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {get_remote_newest_pid, GroupName},
+                    Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
