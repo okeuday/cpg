@@ -94,6 +94,13 @@ to change the probability of returning a particular Erlang process, when
 only a single process is requested from the cpg interface (e.g., from
 the `get_closest_pid` function).
     
+Tests
+-----
+
+    rebar get-deps
+    rebar compile
+    ERL_LIBS="/path/to/proper" rebar eunit
+
 Author
 ------
 

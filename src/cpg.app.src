@@ -27,8 +27,8 @@
         kernel
         ]},
    {mod, {cpg_app, []}},
-   {start_phases, []},
    {env, [
+        {node_type, visible}, % visible | all
         {scope, [
             % automatically created scopes to keep process groups separate
             % (each becomes a locally registered name)
