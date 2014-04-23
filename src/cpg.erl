@@ -139,13 +139,13 @@
 -record(state,
     {
         scope = undefined, % locally registered process name
-        groups = cpg_data:get_empty_groups(), % string() -> #cpg_data{}
-        listen :: visible | all,
-        pids = dict:new()                     % pid() -> list(string())
+        groups,            % GroupName -> #cpg_data{}
+        pids = dict:new(), % pid() -> list(GroupName)
+        listen :: visible | all
     }).
 
 -type scope() :: atom().
--type name() :: any(). % GROUP_STORAGE macro controls this
+-type name() :: any().
 -type via_name() :: {global, scope(), name(), random} |
                     {global, scope(), name(), oldest} |
                     {global, scope(), name(), pos_integer()} |
@@ -163,8 +163,6 @@
                     name(). % for OTP behaviors
 -export_type([scope/0, name/0, via_name/0]).
 
--compile({nowarn_unused_function,
-          [{check_multi_call_replies, 1}]}).
 -compile({inline, [{join_impl, 4},
                    {leave_impl, 4}]}).
 
@@ -383,7 +381,6 @@ join(Scope, GroupName, Pid, Timeout)
 
 join_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
-    group_name_validate(GroupName),
     Request = {join, GroupName, Pid},
     ok = gen_server:call(Scope, Request, Timeout),
     gen_server:abcast(nodes(), Scope, Request),
@@ -508,7 +505,6 @@ leave_impl(Scope, Pid, Timeout)
 
 leave_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
-    group_name_validate(GroupName),
     Request = {leave, GroupName, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
@@ -567,10 +563,10 @@ create(Scope, GroupName)
 
 create(Scope, GroupName, Timeout)
     when is_atom(Scope) ->
-    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(Scope,
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
                                                 {create, GroupName},
                                                 Timeout)
                       end) of
@@ -625,10 +621,10 @@ delete(Scope, GroupName)
 
 delete(Scope, GroupName, Timeout)
     when is_atom(Scope) ->
-    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(Scope,
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
                                                 {delete, GroupName},
                                                 Timeout)
                       end) of
@@ -706,10 +702,10 @@ join(Scope, GroupName, Pid, Timeout)
     join_impl(Scope, GroupName, Pid, Timeout).
 
 join_impl(Scope, GroupName, Pid, Timeout) ->
-    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(Scope,
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
                                                 {join, GroupName, Pid},
                                                 Timeout)
                       end) of
@@ -718,6 +714,18 @@ join_impl(Scope, GroupName, Pid, Timeout) ->
         _ ->
             error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave all groups.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave() ->
+    ok | error.
+
+leave() ->
+    leave_impl(?DEFAULT_SCOPE, self(), infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -730,7 +738,7 @@ join_impl(Scope, GroupName, Pid, Timeout) ->
 
 leave(Pid)
     when is_pid(Pid) ->
-    leave_impl(?DEFAULT_SCOPE, self(), infinity);
+    leave_impl(?DEFAULT_SCOPE, Pid, infinity);
 
 leave(GroupName) ->
     leave_impl(?DEFAULT_SCOPE, GroupName, self(), infinity).
@@ -801,7 +809,8 @@ leave(Scope, GroupName, Pid, Timeout)
 leave_impl(Scope, Pid, Timeout) ->
     case global:trans({Scope, self()},
                       fun() ->
-                          gen_server:multi_call(Scope,
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
                                                 {leave, Pid},
                                                 Timeout)
                       end) of
@@ -812,10 +821,10 @@ leave_impl(Scope, Pid, Timeout) ->
     end.
 
 leave_impl(Scope, GroupName, Pid, Timeout) ->
-    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
-                          gen_server:multi_call(Scope,
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
                                                 {leave, GroupName, Pid},
                                                 Timeout)
                       end) of
@@ -824,6 +833,13 @@ leave_impl(Scope, GroupName, Pid, Timeout) ->
         _ ->
             error
     end.
+
+check_multi_call_replies([]) ->
+    ok;
+check_multi_call_replies([{_, ok} | Replies]) ->
+    check_multi_call_replies(Replies);
+check_multi_call_replies([{_, Result} | _]) ->
+    Result.
 
 -endif.
 
@@ -2807,20 +2823,20 @@ code_change(_, State, _) ->
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}]).
 
-create_group(GroupName, #state{groups = Groups} = State) ->
-    NewGroups = ?GROUP_STORAGE:update(GroupName,
-        fun(OldValue) -> OldValue end, #cpg_data{}, Groups),
-    State#state{groups = NewGroups}.
+create_group(GroupName, #state{groups = {DictI, GroupsData}} = State) ->
+    NewGroupsData = DictI:update(GroupName,
+        fun(OldValue) -> OldValue end, #cpg_data{}, GroupsData),
+    State#state{groups = {DictI, NewGroupsData}}.
 
-delete_group(GroupName, #state{groups = Groups,
+delete_group(GroupName, #state{groups = {DictI, GroupsData},
                                pids = Pids} = State) ->
-    case ?GROUP_STORAGE:find(GroupName, Groups) of
+    case DictI:find(GroupName, GroupsData) of
         error ->
             State;
         {ok, #cpg_data{local_count = 0,
                        remote_count = 0}} ->
-            NewGroups = ?GROUP_STORAGE:erase(GroupName, Groups),
-            State#state{groups = NewGroups};
+            NewGroupsData = DictI:erase(GroupName, GroupsData),
+            State#state{groups = {DictI, NewGroupsData}};
         {ok, #cpg_data{local = Local,
                        remote = Remote}} ->
             NewPids = lists:foldl(fun(#cpg_data_pid{pid = Pid,
@@ -2831,18 +2847,18 @@ delete_group(GroupName, #state{groups = Groups,
                                 lists:delete(GroupName, OldValue)
                             end, P)
             end, Pids, Local ++ Remote),
-            NewGroups = ?GROUP_STORAGE:erase(GroupName, Groups),
-            State#state{groups = NewGroups,
+            NewGroupsData = DictI:erase(GroupName, GroupsData),
+            State#state{groups = {DictI, NewGroupsData},
                         pids = NewPids}
     end.
 
-join_group(GroupName, Pid, #state{groups = Groups,
+join_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                                   pids = Pids} = State) ->
     Entry = #cpg_data_pid{pid = Pid,
                           monitor = erlang:monitor(process, Pid)},
-    NewGroups = if
+    NewGroupsData = if
         node() =:= node(Pid) ->
-            ?GROUP_STORAGE:update(GroupName,
+            DictI:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
                               local = Local,
                               history = History} = OldValue) ->
@@ -2853,9 +2869,9 @@ join_group(GroupName, Pid, #state{groups = Groups,
                 #cpg_data{local_count = 1,
                           local = [Entry],
                           history = [Pid]},
-                Groups);
+                GroupsData);
         true ->
-            ?GROUP_STORAGE:update(GroupName,
+            DictI:update(GroupName,
                 fun(#cpg_data{remote_count = RemoteI,
                               remote = Remote,
                               history = History} = OldValue) ->
@@ -2866,7 +2882,7 @@ join_group(GroupName, Pid, #state{groups = Groups,
                 #cpg_data{remote_count = 1,
                           remote = [Entry],
                           history = [Pid]},
-                Groups)
+                GroupsData)
     end,
     GroupNameList = [GroupName],
     NewPids = dict:update(Pid,
@@ -2874,10 +2890,10 @@ join_group(GroupName, Pid, #state{groups = Groups,
                               lists:umerge(OldValue, GroupNameList)
                           end,
                           GroupNameList, Pids),
-    State#state{groups = NewGroups,
+    State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
-leave_group(GroupName, Pid, #state{groups = Groups,
+leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                                    pids = Pids} = State) ->
     Fpartition = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
         if 
@@ -2888,9 +2904,9 @@ leave_group(GroupName, Pid, #state{groups = Groups,
                 false
         end
     end,
-    NextGroups = if
+    NextGroupsData = if
         node() =:= node(Pid) ->
-            ?GROUP_STORAGE:update(GroupName,
+            DictI:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
                               local = Local,
                               history = History} = OldValue) ->
@@ -2900,9 +2916,9 @@ leave_group(GroupName, Pid, #state{groups = Groups,
                                       erlang:length(OldLocal),
                                       local = NewLocal,
                                       history = delete_all(Pid, History)}
-                end, Groups);
+                end, GroupsData);
         true ->
-            ?GROUP_STORAGE:update(GroupName,
+            DictI:update(GroupName,
                 fun(#cpg_data{remote_count = RemoteI,
                               remote = Remote,
                               history = History} = OldValue) ->
@@ -2912,25 +2928,25 @@ leave_group(GroupName, Pid, #state{groups = Groups,
                                       erlang:length(OldRemote),
                                       remote = NewRemote,
                                       history = delete_all(Pid, History)}
-                end, Groups)
+                end, GroupsData)
     end,
     NewPids = dict:update(Pid,
                           fun(OldValue) ->
                               lists:delete(GroupName, OldValue)
                           end,
                           Pids),
-    NewGroups = case ?GROUP_STORAGE:find(GroupName, NextGroups) of
+    NewGroupsData = case DictI:find(GroupName, NextGroupsData) of
         error ->
-            NextGroups;
+            NextGroupsData;
         {ok, #cpg_data{local_count = 0,
                        remote_count = 0}} ->
             % necessary so that pattern matching entries are not shadowed
             % by empty entries that provide exact matches
-            ?GROUP_STORAGE:erase(GroupName, NextGroups);
+            DictI:erase(GroupName, NextGroupsData);
         {ok, #cpg_data{}} ->
-            NextGroups
+            NextGroupsData
     end,
-    State#state{groups = NewGroups,
+    State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
 store_conflict_add_entries(0, Entries, _) ->
@@ -3072,34 +3088,34 @@ store_new_group([#cpg_data_pid{pid = Pid} = E | OldEntries],
                                         remote = [NewE | Remote]})
     end.
 
-store(#state{groups = ExternalGroups,
+store(#state{groups = {DictI, ExternalGroupsData},
              pids = ExternalPids},
-      #state{groups = Groups,
+      #state{groups = {DictI, GroupsData},
              pids = Pids} = State) ->
     % V1 is external
     % V2 is internal
-    NewGroups = ?GROUP_STORAGE:fold(fun(GroupName,
-        #cpg_data{local = V1Local,
-                  remote = V1Remote,
-                  history = V1History} = V1, T) ->
-        case ?GROUP_STORAGE:is_key(GroupName, T) of
+    NewGroupsData = DictI:fold(fun(GroupName,
+                                   #cpg_data{local = V1Local,
+                                             remote = V1Remote,
+                                             history = V1History} = V1, T) ->
+        case DictI:is_key(GroupName, T) of
             true ->
                 % merge the external group in
-                ?GROUP_STORAGE:update(GroupName,
-                    fun(V2) ->
-                        store_conflict(GroupName, V1, V2)
-                    end, T);
+                DictI:update(GroupName,
+                             fun(V2) ->
+                                 store_conflict(GroupName, V1, V2)
+                             end, T);
             false ->
                 % create the new external group as an internal group
-                ?GROUP_STORAGE:store(GroupName,
-                    store_new_group(V1Local ++ V1Remote,
-                                    #cpg_data{history = V1History}), T)
+                DictI:store(GroupName,
+                            store_new_group(V1Local ++ V1Remote,
+                                            #cpg_data{history = V1History}), T)
         end
-    end, Groups, ExternalGroups),
+    end, GroupsData, ExternalGroupsData),
     NewPids = dict:merge(fun(_, V1, V2) ->
                              lists:umerge(V2, V1)
                          end, ExternalPids, Pids),
-    State#state{groups = NewGroups,
+    State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
 member_died(Pid, #state{pids = Pids} = State) ->
@@ -3112,22 +3128,6 @@ member_died(Pid, #state{pids = Pids} = State) ->
                 leave_group(GroupName, Pid, S)
             end, State, GroupNames)
     end.
-
--ifdef(GROUP_NAME_PATTERN_MATCHING).
-group_name_validate(Name) ->
-    trie:is_pattern(Name),
-    ok.
--else.
-group_name_validate(_) ->
-    ok.
--endif.
-
-check_multi_call_replies([]) ->
-    ok;
-check_multi_call_replies([{_, ok} | Replies]) ->
-    check_multi_call_replies(Replies);
-check_multi_call_replies([{_, Result} | _]) ->
-    Result.
 
 whereis_name_random(1, [Pid]) ->
     Pid;
