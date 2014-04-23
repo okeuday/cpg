@@ -22,7 +22,7 @@ the ability to set a pattern string as a group name.  A pattern string
 is a string that includes the`"*"`wildcard character (equivalent to ".+"
 regex while`"**"`is forbidden).  When a group name is a pattern string,
 a process can be retrieved by matching the pattern.  To change the behavior
-to be compatible with pg2 usage (or gproc), see the *Usage* section below.
+to be compatible with pg2 usage (or gproc), see the **Usage** section below.
 
 The cpg interface provides more error checking than the pg2 module, and it
 allows the user to obtain the groups state so that group name lookups do not
@@ -87,7 +87,7 @@ as an atom which is used to locally register a cpg Erlang process using
 `start_link/1`.  For a given cpg scope, any Erlang process can join or leave
 a group.  The group name is a string (list of integers) due to the default
 usage of the trie data structure, but that can be changed
-(see the *Usage* section above).  If the scope is not specified, the default
+(see the **Usage** section above).  If the scope is not specified, the default
 scope is used: `cpg_default_scope`.
 
 In the example, both the process group "Hello" and the process group "World!"
