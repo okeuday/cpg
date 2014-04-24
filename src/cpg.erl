@@ -126,7 +126,15 @@
          get_remote_newest_pid/2,
          get_remote_newest_pid/3,
          get_remote_newest_pid/4,
-         reset/1]).
+         reset/1,
+         add_join_callback/2,
+         add_join_callback/3,
+         add_leave_callback/2,
+         add_leave_callback/3,
+         remove_join_callback/2,
+         remove_join_callback/3,
+         remove_leave_callback/2,
+         remove_leave_callback/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
@@ -141,6 +149,7 @@
         scope = undefined, % locally registered process name
         groups,            % GroupName -> #cpg_data{}
         pids = dict:new(), % pid() -> list(GroupName)
+        callbacks = undefined,
         listen :: visible | all
     }).
 
@@ -161,7 +170,8 @@
                     {scope(), name()} |
                     {name(), pos_integer()} |
                     name(). % for OTP behaviors
--export_type([scope/0, name/0, via_name/0]).
+-type callback() :: fun((any(), pid()) -> any()).
+-export_type([scope/0, name/0, via_name/0, callback/0]).
 
 -compile({inline, [{join_impl, 4},
                    {leave_impl, 4}]}).
@@ -2521,6 +2531,122 @@ reset(Scope)
     when is_atom(Scope) ->
     gen_server:cast(Scope, reset).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add a join callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec add_join_callback(name(),
+                        callback()) ->
+    ok.
+
+add_join_callback(GroupName, F)
+    when is_function(F, 2) ->
+    gen_server:cast(?DEFAULT_SCOPE, {add_join_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add a join callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec add_join_callback(scope(),
+                        name(),
+                        callback()) ->
+    ok.
+
+add_join_callback(Scope, GroupName, F)
+    when is_atom(Scope), is_function(F, 2) ->
+    gen_server:cast(Scope, {add_join_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add a leave callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec add_leave_callback(name(),
+                         callback()) ->
+    ok.
+
+add_leave_callback(GroupName, F)
+    when is_function(F, 2) ->
+    gen_server:cast(?DEFAULT_SCOPE, {add_leave_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add a leave callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec add_leave_callback(scope(),
+                         name(),
+                         callback()) ->
+    ok.
+
+add_leave_callback(Scope, GroupName, F)
+    when is_atom(Scope), is_function(F, 2) ->
+    gen_server:cast(Scope, {add_leave_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove a join callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec remove_join_callback(name(),
+                           callback()) ->
+    ok.
+
+remove_join_callback(GroupName, F)
+    when is_function(F, 2) ->
+    gen_server:cast(?DEFAULT_SCOPE, {remove_join_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove a join callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec remove_join_callback(scope(),
+                           name(),
+                           callback()) ->
+    ok.
+
+remove_join_callback(Scope, GroupName, F)
+    when is_atom(Scope), is_function(F, 2) ->
+    gen_server:cast(Scope, {remove_join_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove a leave callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec remove_leave_callback(name(),
+                            callback()) ->
+    ok.
+
+remove_leave_callback(GroupName, F)
+    when is_function(F, 2) ->
+    gen_server:cast(?DEFAULT_SCOPE, {remove_leave_callback, GroupName, F}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove a leave callback.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec remove_leave_callback(scope(),
+                            name(),
+                            callback()) ->
+    ok.
+
+remove_leave_callback(Scope, GroupName, F)
+    when is_atom(Scope), is_function(F, 2) ->
+    gen_server:cast(Scope, {remove_leave_callback, GroupName, F}).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -2770,6 +2896,26 @@ handle_cast(reset,
     end,
     {noreply, State#state{listen = Listen}};
 
+handle_cast({add_join_callback, GroupName, F},
+            #state{callbacks = Callbacks} = State) ->
+    NewCallbacks = cpg_callbacks:add_join(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = NewCallbacks}};
+
+handle_cast({add_leave_callback, GroupName, F},
+            #state{callbacks = Callbacks} = State) ->
+    NewCallbacks = cpg_callbacks:add_leave(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = NewCallbacks}};
+
+handle_cast({remove_join_callback, GroupName, F},
+            #state{callbacks = Callbacks} = State) ->
+    NewCallbacks = cpg_callbacks:remove_join(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = NewCallbacks}};
+
+handle_cast({remove_leave_callback, GroupName, F},
+            #state{callbacks = Callbacks} = State) ->
+    NewCallbacks = cpg_callbacks:remove_leave(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = NewCallbacks}};
+
 handle_cast(_, State) ->
     {noreply, State}.
 
@@ -2806,7 +2952,9 @@ handle_info(_, State) ->
 
 -spec terminate(term(), #state{}) -> ok.
 
-terminate(_, _) ->
+terminate(Reason,
+          #state{callbacks = Callbacks}) ->
+    cpg_callbacks:stop_link(Callbacks, Reason),
     ok.
 
 %% @private
@@ -2829,7 +2977,8 @@ create_group(GroupName, #state{groups = {DictI, GroupsData}} = State) ->
     State#state{groups = {DictI, NewGroupsData}}.
 
 delete_group(GroupName, #state{groups = {DictI, GroupsData},
-                               pids = Pids} = State) ->
+                               pids = Pids,
+                               callbacks = Callbacks} = State) ->
     case DictI:find(GroupName, GroupsData) of
         error ->
             State;
@@ -2842,6 +2991,7 @@ delete_group(GroupName, #state{groups = {DictI, GroupsData},
             NewPids = lists:foldl(fun(#cpg_data_pid{pid = Pid,
                                                     monitor = Ref}, P) ->
                 true = erlang:demonitor(Ref, [flush]),
+                cpg_callbacks:notify_leave(Callbacks, GroupName, Pid),
                 dict:update(Pid,
                             fun(OldValue) ->
                                 lists:delete(GroupName, OldValue)
@@ -2853,7 +3003,8 @@ delete_group(GroupName, #state{groups = {DictI, GroupsData},
     end.
 
 join_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
-                                  pids = Pids} = State) ->
+                                  pids = Pids,
+                                  callbacks = Callbacks} = State) ->
     Entry = #cpg_data_pid{pid = Pid,
                           monitor = erlang:monitor(process, Pid)},
     NewGroupsData = if
@@ -2890,11 +3041,13 @@ join_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                               lists:umerge(OldValue, GroupNameList)
                           end,
                           GroupNameList, Pids),
+    cpg_callbacks:notify_join(Callbacks, GroupName, Pid),
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
 leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
-                                   pids = Pids} = State) ->
+                                   pids = Pids,
+                                   callbacks = Callbacks} = State) ->
     Fpartition = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
         if 
             P == Pid ->
@@ -2912,8 +3065,9 @@ leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                               history = History} = OldValue) ->
                     {OldLocal,
                      NewLocal} = lists:partition(Fpartition, Local),
-                    OldValue#cpg_data{local_count = LocalI -
-                                      erlang:length(OldLocal),
+                    I = erlang:length(OldLocal),
+                    cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, I),
+                    OldValue#cpg_data{local_count = LocalI - I,
                                       local = NewLocal,
                                       history = delete_all(Pid, History)}
                 end, GroupsData);
@@ -2924,8 +3078,9 @@ leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                               history = History} = OldValue) ->
                     {OldRemote,
                      NewRemote} = lists:partition(Fpartition, Remote),
-                    OldValue#cpg_data{remote_count = RemoteI -
-                                      erlang:length(OldRemote),
+                    I = erlang:length(OldRemote),
+                    cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, I),
+                    OldValue#cpg_data{remote_count = RemoteI - I,
                                       remote = NewRemote,
                                       history = delete_all(Pid, History)}
                 end, GroupsData)
@@ -2980,14 +3135,16 @@ store_conflict_remove_history(0, History, _) ->
 store_conflict_remove_history(I, History, Pid) ->
     store_conflict_remove_history(I + 1, lists:delete(Pid, History), Pid).
 
-store_conflict_f([], V2, _) ->
+store_conflict_f([], V2, _, _, _) ->
     V2;
 store_conflict_f([Pid | V1AllPids],
                  #cpg_data{local_count = LocalI,
                            local = Local,
                            remote_count = RemoteI,
                            remote = Remote,
-                           history = History} = V2, V1All) ->
+                           history = History} = V2,
+                 V1All, GroupName,
+                 #state{callbacks = Callbacks} = State) ->
     % for each external Pid, check the internal Pids within the same group
     Fpartition = fun(#cpg_data_pid{pid = P}) ->
         if 
@@ -3007,15 +3164,19 @@ store_conflict_f([Pid | V1AllPids],
             if
                 I > 0 ->
                     % add
+                    cpg_callbacks:notify_join(Callbacks,
+                                              GroupName, Pid, I),
                     NewLocal = store_conflict_add_entries(I, Local, Pid),
                     NewHistory = store_conflict_add_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
                                      V2#cpg_data{local_count = LocalI + I,
                                                  local = NewLocal,
                                                  history = NewHistory},
-                                     V1All);
+                                     V1All, GroupName, State);
                 I < 0 ->
                     % remove
+                    cpg_callbacks:notify_leave(Callbacks,
+                                               GroupName, Pid, I * -1),
                     NewV2Pids = store_conflict_remove_entries(I, V2Pids),
                     NewHistory = store_conflict_remove_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
@@ -3023,9 +3184,9 @@ store_conflict_f([Pid | V1AllPids],
                                                  local = NewV2Pids ++
                                                          LocalRest,
                                                  history = NewHistory},
-                                     V1All);
+                                     V1All, GroupName, State);
                 true ->
-                    store_conflict_f(V1AllPids, V2, V1All)
+                    store_conflict_f(V1AllPids, V2, V1All, GroupName, State)
             end;
         true ->
             % make sure there are equal counts of a remote pid
@@ -3036,15 +3197,19 @@ store_conflict_f([Pid | V1AllPids],
             if
                 I > 0 ->
                     % add
+                    cpg_callbacks:notify_join(Callbacks,
+                                              GroupName, Pid, I),
                     NewRemote = store_conflict_add_entries(I, Remote, Pid),
                     NewHistory = store_conflict_add_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
                                      V2#cpg_data{remote_count = RemoteI + I,
                                                  remote = NewRemote,
                                                  history = NewHistory},
-                                     V1All);
+                                     V1All, GroupName, State);
                 I < 0 ->
                     % remove
+                    cpg_callbacks:notify_leave(Callbacks,
+                                               GroupName, Pid, I * -1),
                     NewV2Pids = store_conflict_remove_entries(I, V2Pids),
                     NewHistory = store_conflict_remove_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
@@ -3052,40 +3217,45 @@ store_conflict_f([Pid | V1AllPids],
                                                  remote = NewV2Pids ++
                                                           RemoteRest,
                                                  history = NewHistory},
-                                     V1All);
+                                     V1All, GroupName, State);
                 true ->
-                    store_conflict_f(V1AllPids, V2, V1All)
+                    store_conflict_f(V1AllPids, V2, V1All, GroupName, State)
             end
     end.
 
-store_conflict(_,
+store_conflict(GroupName,
                #cpg_data{local = V1Local,
-                         remote = V1Remote}, V2) ->
+                         remote = V1Remote}, V2, State) ->
     % V1 is external
     % V2 is internal
     V1All = V1Local ++ V1Remote,
     store_conflict_f(lists:usort(lists:map(fun(#cpg_data_pid{pid = Pid}) ->
                          Pid
                      end, V1All)),
-                     V2, V1All).
+                     V2, V1All, GroupName, State).
 
-store_new_group([], V2) ->
+store_new_group([], V2, _, _) ->
     V2;
 store_new_group([#cpg_data_pid{pid = Pid} = E | OldEntries],
                  #cpg_data{local_count = LocalI,
                            local = Local,
                            remote_count = RemoteI,
-                           remote = Remote} = V2) ->
+                           remote = Remote} = V2,
+                GroupName,
+                #state{callbacks = Callbacks} = State) ->
     NewE = E#cpg_data_pid{monitor = erlang:monitor(process, Pid)},
+    cpg_callbacks:notify_join(Callbacks, GroupName, Pid),
     if
         node() =:= node(Pid) ->
             store_new_group(OldEntries,
                             V2#cpg_data{local_count = LocalI + 1,
-                                        local = [NewE | Local]});
+                                        local = [NewE | Local]},
+                            GroupName, State);
         true ->
             store_new_group(OldEntries,
                             V2#cpg_data{remote_count = RemoteI + 1,
-                                        remote = [NewE | Remote]})
+                                        remote = [NewE | Remote]},
+                            GroupName, State)
     end.
 
 store(#state{groups = {DictI, ExternalGroupsData},
@@ -3103,13 +3273,14 @@ store(#state{groups = {DictI, ExternalGroupsData},
                 % merge the external group in
                 DictI:update(GroupName,
                              fun(V2) ->
-                                 store_conflict(GroupName, V1, V2)
+                                 store_conflict(GroupName, V1, V2, State)
                              end, T);
             false ->
                 % create the new external group as an internal group
                 DictI:store(GroupName,
                             store_new_group(V1Local ++ V1Remote,
-                                            #cpg_data{history = V1History}), T)
+                                            #cpg_data{history = V1History},
+                                            GroupName, State), T)
         end
     end, GroupsData, ExternalGroupsData),
     NewPids = dict:merge(fun(_, V1, V2) ->
