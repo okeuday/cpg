@@ -66,6 +66,8 @@
         f_leave
     }).
 
+-include("cpg_logging.hrl").
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -184,7 +186,12 @@ notify(GroupName, GroupPid, {DictI, FsData}) ->
     case DictI:find(GroupName, FsData) of
         {ok, L} ->
             lists:foreach(fun(F) ->
-                F(GroupName, GroupPid)
+                try F(GroupName, GroupPid)
+                catch
+                    Type:Error ->
+                        ?LOG_ERROR("callback ~p: ~p~n~p",
+                                   [Type, Error, erlang:get_stacktrace()])
+                end
             end, L);
         error ->
             ok
