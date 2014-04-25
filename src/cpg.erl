@@ -2857,7 +2857,6 @@ handle_call({get_remote_newest_pid, GroupName, Exclude}, _,
     {reply, cpg_data:get_remote_newest_pid(GroupName, Exclude, Groups), State};
 
 handle_call(Request, _, State) ->
-    ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
      error, State}.
 
@@ -2871,6 +2870,18 @@ handle_cast({exchange, Node, ExternalState}, State) ->
 
 handle_cast({join, GroupName, Pid}, State) ->
     {noreply, join_group(GroupName, Pid, join_remote, State)};
+
+handle_cast({leave, Pid},
+            #state{pids = Pids} = State) ->
+    case dict:find(Pid, Pids) of
+        {ok, GroupNameList} ->
+            NewState = lists:foldl(fun(GroupName, S) ->
+                leave_group(GroupName, Pid, leave_remote, S)
+            end, State, GroupNameList),
+            {noreply, NewState};
+        error ->
+            {noreply, State}
+    end;
 
 handle_cast({leave, GroupName, Pid},
             #state{pids = Pids} = State) ->
@@ -2919,8 +2930,9 @@ handle_cast({remove_leave_callback, GroupName, F},
     NewCallbacks = cpg_callbacks:remove_leave(Callbacks, GroupName, F),
     {noreply, State#state{callbacks = NewCallbacks}};
 
-handle_cast(_, State) ->
-    {noreply, State}.
+handle_cast(Request, State) ->
+    {stop, lists:flatten(io_lib:format("Unknown cast \"~p\"", [Request])),
+     State}.
 
 %% @private
 %% @doc
@@ -2929,9 +2941,13 @@ handle_cast(_, State) ->
 handle_info({'DOWN', _MonitorRef, process, Pid, Info}, State) ->
     {noreply, member_died(Pid, {exit, Info}, State)};
 
-handle_info({nodeup, Node},
+handle_info({nodeup, Node, _},
             #state{scope = Scope} = State) ->
     gen_server:cast({Scope, Node}, {exchange, node(), State}),
+    {noreply, State};
+
+handle_info({nodedown, _, _}, State) ->
+    % rely on pid monitors for internal group changes
     {noreply, State};
 
 handle_info({new, Node},
@@ -2944,8 +2960,9 @@ handle_info({cpg_data, From},
     From ! {cloudi_cpg_data, Groups},
     {noreply, State};
 
-handle_info(_, State) ->
-    {noreply, State}.
+handle_info(Request, State) ->
+    {stop, lists:flatten(io_lib:format("Unknown info \"~p\"", [Request])),
+     State}.
 
 %% @private
 %% @doc
