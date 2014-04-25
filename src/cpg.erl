@@ -2864,8 +2864,9 @@ handle_call(Request, _, State) ->
 %% @doc
 %% @end
 
-handle_cast({exchange, Node, ExternalState}, State) ->
-    ?LOG_INFO("received state from ~p", [Node]),
+handle_cast({exchange, Node, ExternalState},
+            #state{scope = Scope} = State) ->
+    ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
     {noreply, store(ExternalState, State)};
 
 handle_cast({join, GroupName, Pid}, State) ->
