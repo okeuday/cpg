@@ -2672,9 +2672,14 @@ remove_leave_callback(Scope, GroupName, F)
 %% @end
 
 init([Scope]) ->
-    Ns = nodes(),
     Listen = cpg_app:listen_type(),
     monitor_nodes(true, Listen),
+    Ns = if
+        Listen =:= visible ->
+            nodes();
+        Listen =:= all ->
+            nodes(connected)
+    end,
     lists:foreach(fun(N) ->
                           {Scope, N} ! {new, node()}
                           % data is not persistent in ets, so trust the
