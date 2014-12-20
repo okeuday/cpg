@@ -3,7 +3,7 @@
 
 {application, cpg, 
   [{description, "CloudI Process Groups"},
-   {vsn, "1.4.0-rc.4"},
+   {vsn, "1.4.0"},
    {modules, [
         cpg,
         cpg_app,
