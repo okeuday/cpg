@@ -93,8 +93,8 @@
 -include("cpg_data.hrl").
 -include("cpg_constants.hrl").
 
-% Groups == GroupName -> #cpg_data{} lookup, using the DictI module
--type state() :: {DictI :: module(), Groups :: any()}.
+% GroupsData == GroupName -> #cpg_data{} lookup, using the DictI module
+-type state() :: {DictI :: module(), GroupsData :: any()}.
 -export_type([state/0]).
 
 -type get_members_return() ::
