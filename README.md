@@ -38,10 +38,8 @@ the distributed Erlang functionality, provided natively by Erlang OTP.
 The distributed Erlang functionality automatically creates a fully-connected
 network topology and is only meant for a Local Area Network (LAN).
 Since a fully-connected network topology is created that requires a
-net tick time average of 60 seconds (the net tick time is not changed
-because of the problems that occur due to the assumptions based on its
-default value, which impacts typical Erlang OTP functionality, e.g.,
-Erlang process links between distributed Erlang nodes) the distributed
+net tick time average of 60 seconds (the net tick time is not increased
+to ensure distributed Erlang nodes fail-fast) the distributed
 Erlang node connections are limited to roughly 50-100 nodes.  So, that
 means these process group solutions are only targeting a cluster of Erlang
 nodes, given the constraints of distributed Erlang and a fully-connected
@@ -62,10 +60,10 @@ number of times).
 
 All cpg join and leave operations change global state as a
 Commutative Replicated Data-Type (CmRDT) by sending the operation to the
-associated cpg Erlang process as a Distributed Erlang message to all remote
+associated cpg Erlang process as a distributed Erlang message to all remote
 nodes after the operation successfully completes on the local node.
 
-cpg also uses Distributed Erlang node monitoring to handle netsplits as a
+cpg also uses distributed Erlang node monitoring to handle netsplits as a
 Convergent Replicated Data-Type (CvRDT) by sending all of the internal
 cpg state to remote nodes that have recently connected.  The associated
 cpg Erlang process on the remote node then performs a merge operation to
