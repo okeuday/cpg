@@ -76,7 +76,7 @@ The CRDT functionality in cpg may look similar to a PN-Set due to tracking
 all the Erlang pids and the count of how many times they have been added.
 However, the consistency of the internal cpg state relies on serialized
 mutability on the local node (naturally, due to a single Erlang process
-owning the internal cpg data) before operation is sent to the remote nodes
+owning the internal cpg data) before the operation is sent to the remote nodes
 (for join or leave function calls that operate as a CmRDT).
 
 The design description above assumes `GROUP_NAME_WITH_LOCAL_PIDS_ONLY` is
