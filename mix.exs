@@ -10,6 +10,24 @@ defmodule CPG.Mixfile do
      deps: deps]
   end
 
+  def application do
+    [applications: [
+       :quickrand,
+       :trie],
+     mod: {:cpg_app, []},
+     registered: [
+       :cpg_default_scope,
+       :groups_scope1,
+       :groups_scope2],
+     env: [
+       node_type: :visible,
+       group_storage: :trie,
+       scope: [
+         :cpg_default_scope,
+         :groups_scope1,
+         :groups_scope2]]]
+  end
+
   defp deps do
     [{:trie, "~> 1.5.1"},
      {:reltool_util, "~> 1.5.1"},
