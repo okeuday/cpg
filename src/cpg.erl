@@ -33,8 +33,8 @@
 %%% %CopyrightEnd%
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -61,6 +61,10 @@
          leave/2,
          leave/3,
          leave/4,
+         leave_counts/1,
+         leave_counts/2,
+         leave_counts/3,
+         leave_counts/4,
          join_count/1,
          join_count/2,
          join_count/3,
@@ -85,6 +89,9 @@
          which_groups/1,
          which_groups/2,
          which_groups/3,
+         which_groups_counts/1,
+         which_groups_counts/2,
+         which_groups_counts/3,
          get_closest_pid/1,
          get_closest_pid/2,
          get_closest_pid/3,
@@ -527,6 +534,72 @@ leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, Timeout).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts)
+    when is_list(Counts) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()}) | scope(),
+                   pid() | list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts, Pid)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Scope, Counts)
+    when is_atom(Scope), is_list(Counts) ->
+    leave_counts_impl(Scope, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope() | list({name(), pos_integer()}),
+                   list({name(), pos_integer()}) | pid(),
+                   pid() | pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Counts, Pid, Timeout)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope(),
+                   list({name(), pos_integer()}),
+                   pid(),
+                   pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid, Timeout)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, Timeout).
+
 leave_impl(Scope, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {leave, Pid},
@@ -541,6 +614,17 @@ leave_impl(Scope, Pid, Timeout)
 leave_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {leave, GroupName, Pid},
+    case gen_server:call(Scope, Request, Timeout) of
+        ok ->
+            gen_server:abcast(nodes(), Scope, Request),
+            ok;
+        error ->
+            error
+    end.
+
+leave_counts_impl(Scope, Counts, Pid, Timeout)
+    when node(Pid) =:= node() ->
+    Request = {leave_counts, Counts, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
             gen_server:abcast(nodes(), Scope, Request),
@@ -841,6 +925,72 @@ leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, Timeout).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts)
+    when is_list(Counts) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()}) | scope(),
+                   pid() | list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts, Pid)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Scope, Counts)
+    when is_atom(Scope), is_list(Counts) ->
+    leave_counts_impl(Scope, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope() | list({name(), pos_integer()}),
+                   list({name(), pos_integer()}) | pid(),
+                   pid() | pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Counts, Pid, Timeout)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope(),
+                   list({name(), pos_integer()}),
+                   pid(),
+                   pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid, Timeout)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, Timeout).
+
 leave_impl(Scope, Pid, Timeout) ->
     case global:trans({Scope, self()},
                       fun() ->
@@ -861,6 +1011,20 @@ leave_impl(Scope, GroupName, Pid, Timeout) ->
                           gen_server:multi_call([node() | nodes()],
                                                 Scope,
                                                 {leave, GroupName, Pid},
+                                                Timeout)
+                      end) of
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
+        _ ->
+            error
+    end.
+
+leave_counts_impl(Scope, Counts, Pid, Timeout) ->
+    case global:trans({{Scope, Counts}, self()},
+                      fun() ->
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
+                                                {leave_counts, Counts, Pid},
                                                 Timeout)
                       end) of
         {[_ | _] = Replies, _} ->
@@ -925,7 +1089,7 @@ join_count(Scope, GroupName)
 join_count(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
     gen_server:call(Scope,
-                    {join_count, GroupName, self()});
+                    {join_count, GroupName, Pid});
 
 join_count(GroupName, Pid, Timeout)
     when is_pid(Pid) ->
@@ -1601,6 +1765,58 @@ which_groups(Scope, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     gen_server:call(Scope,
                     {which_groups, Pid},
+                    Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the join_count of each group a process has joined.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups_counts(pid()) ->
+    list({name(), pos_integer()}).
+
+which_groups_counts(Pid)
+    when is_pid(Pid) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {which_groups_counts, Pid}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the join_count of each group a process has joined.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups_counts(scope() | pid(),
+                          pid() | pos_integer() | infinity) ->
+    list({name(), pos_integer()}).
+
+which_groups_counts(Scope, Pid)
+    when is_atom(Scope), is_pid(Pid) ->
+    gen_server:call(Scope,
+                    {which_groups_counts, Pid});
+
+which_groups_counts(Pid, Timeout)
+    when is_pid(Pid) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {which_groups_counts, Pid},
+                    Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the join_count of each group a process has joined.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups_counts(scope(),
+                          pid(),
+                          pos_integer() | infinity) ->
+    list({name(), pos_integer()}).
+
+which_groups_counts(Scope, Pid, Timeout)
+    when is_atom(Scope), is_pid(Pid) ->
+    gen_server:call(Scope,
+                    {which_groups_counts, Pid},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2793,16 +3009,25 @@ handle_call({leave, Pid} = Request, _,
 
 handle_call({leave, GroupName, Pid} = Request, _,
             #state{pids = Pids} = State) ->
-    Found = case dict:find(Pid, Pids) of
-        error ->
-            false;
-        {ok, GroupNameList} ->
-            lists:member(GroupName, GroupNameList)
-    end,
+    Valid = leave_valid(GroupName, Pid, Pids),
     if
-        Found ->
+        Valid ->
             abcast_hidden_nodes(Request, State),
             {reply, ok, leave_group(GroupName, Pid, leave_local, State)};
+        true ->
+            {reply, error, State}
+    end;
+
+handle_call({leave_counts, Counts, Pid} = Request, _,
+            #state{pids = Pids} = State) ->
+    Valid = leave_counts_valid(Counts, Pid, Pids),
+    if
+        Valid ->
+            abcast_hidden_nodes(Request, State),
+            NewState = lists:foldl(fun({GroupName, Count}, S) ->
+                leave_group_count(Count, GroupName, Pid, leave_local, S)
+            end, State, Counts),
+            {reply, ok, NewState};
         true ->
             {reply, error, State}
     end;
@@ -2857,6 +3082,32 @@ handle_call({which_groups, Pid}, _,
     case dict:find(Pid, Pids) of
         {ok, L} ->
             {reply, L, State};
+        error ->
+            {reply, [], State}
+    end;
+
+handle_call({which_groups_counts, Pid}, _,
+            #state{groups = {DictI, GroupsData},
+                   pids = Pids} = State) ->
+    case dict:find(Pid, Pids) of
+        {ok, L} ->
+            CountsN = lists:foldr(fun(GroupName, Counts0) ->
+                case DictI:find(GroupName, GroupsData) of
+                    error ->
+                        Counts0;
+                    {ok, #cpg_data{local_count = 0,
+                                   remote_count = 0}} ->
+                        Counts0;
+                    {ok, #cpg_data{history = History}} ->
+                        case count(Pid, History) of
+                            0 ->
+                                Counts0;
+                            Count ->
+                                [{GroupName, Count} | Counts0]
+                        end
+                end
+            end, [], L),
+            {reply, CountsN, State};
         error ->
             {reply, [], State}
     end;
@@ -2979,15 +3230,23 @@ handle_cast({leave, Pid},
 
 handle_cast({leave, GroupName, Pid},
             #state{pids = Pids} = State) ->
-    Found = case dict:find(Pid, Pids) of
-        error ->
-            false;
-        {ok, GroupNameList} ->
-            lists:member(GroupName, GroupNameList)
-    end,
+    Valid = leave_valid(GroupName, Pid, Pids),
     if
-        Found ->
+        Valid ->
             {noreply, leave_group(GroupName, Pid, leave_remote, State)};
+        true ->
+            {noreply, State}
+    end;
+
+handle_cast({leave_counts, Counts, Pid},
+            #state{pids = Pids} = State) ->
+    Valid = leave_counts_valid(Counts, Pid, Pids),
+    if
+        Valid ->
+            NewState = lists:foldl(fun({GroupName, Count}, S) ->
+                leave_group_count(Count, GroupName, Pid, leave_remote, S)
+            end, State, Counts),
+            {noreply, NewState};
         true ->
             {noreply, State}
     end;
@@ -3306,6 +3565,35 @@ leave_group_completely(GroupName, Pid, Reason,
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
+leave_group_count(0, _, _, _, State) ->
+    State;
+leave_group_count(Count, GroupName, Pid, Reason, State) ->
+    leave_group_count(Count - 1, GroupName, Pid, Reason,
+                      leave_group(GroupName, Pid, Reason, State)).
+
+leave_valid(GroupName, Pid, Pids) ->
+    case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:member(GroupName, GroupNameList)
+    end.
+
+leave_counts_valid(Counts, Pid, Pids) ->
+    case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:all(fun(GroupNameCount) ->
+                case GroupNameCount of
+                    {GroupName, Count} when is_integer(Count), Count > 0 ->
+                        lists:member(GroupName, GroupNameList);
+                    _ ->
+                        false
+                end
+            end, Counts)
+    end.
+
 store_conflict_add_entries(0, Entries, _) ->
     Entries;
 store_conflict_add_entries(I, Entries, Pid) ->
@@ -3533,7 +3821,7 @@ select([], Output, _) ->
 select([H | T], Output, F) ->
     case F(H) of
         true ->
-            {H, lists:reverse(Output) ++ T};
+            {H, lists:reverse(Output, T)};
         false ->
             select(T, [H | Output], F)
     end.
