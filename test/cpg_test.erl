@@ -352,6 +352,12 @@ pid_counts_test() ->
     ok = cpg:leave_counts(Pid1Counts, Pid1),
     ok = cpg:leave_counts(Pid2Counts, Pid2),
     ok = cpg:leave_counts(Pid3Counts, Pid3),
+    [] = cpg:which_groups_counts(Pid1),
+    [] = cpg:which_groups_counts(Pid2),
+    [] = cpg:which_groups_counts(Pid2),
+    [] = cpg:which_groups(Pid1),
+    [] = cpg:which_groups(Pid2),
+    [] = cpg:which_groups(Pid2),
     ok = kill_pids([Pid1, Pid2, Pid3]),
     ok.
 
