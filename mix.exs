@@ -3,7 +3,7 @@ defmodule CPG.Mixfile do
 
   def project do
     [app: :cpg,
-     version: "1.5.2",
+     version: "1.5.3",
      language: :erlang,
      description: description,
      package: package,
@@ -29,9 +29,9 @@ defmodule CPG.Mixfile do
   end
 
   defp deps do
-    [{:trie, "~> 1.5.2"},
-     {:reltool_util, "~> 1.5.2"},
-     {:quickrand, "~> 1.5.2"}]
+    [{:trie, "~> 1.5.3"},
+     {:reltool_util, "~> 1.5.3"},
+     {:quickrand, "~> 1.5.3"}]
   end
 
   defp description do
