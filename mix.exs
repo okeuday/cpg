@@ -1,9 +1,12 @@
+#-*-Mode:elixir;coding:utf-8;tab-width:2;c-basic-offset:2;indent-tabs-mode:()-*-
+# ex: set ft=elixir fenc=utf-8 sts=2 ts=2 sw=2 et nomod:
+
 defmodule CPG.Mixfile do
   use Mix.Project
 
   def project do
     [app: :cpg,
-     version: "1.6.0",
+     version: "1.7.0",
      language: :erlang,
      description: description(),
      package: package(),
@@ -29,9 +32,9 @@ defmodule CPG.Mixfile do
   end
 
   defp deps do
-    [{:trie, "~> 1.6.0"},
-     {:reltool_util, "~> 1.6.0"},
-     {:quickrand, "~> 1.6.0"}]
+    [{:trie, "~> 1.7.0"},
+     {:reltool_util, "~> 1.7.0"},
+     {:quickrand, "~> 1.7.0"}]
   end
 
   defp description do
