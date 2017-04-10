@@ -262,9 +262,6 @@ scope_exists(Scope) ->
             Error
     end.
 
--ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
--define(MEMBERSHIP_CHECK(F, TRUE, FALSE), case F of ok -> TRUE end).
-
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create a group explicitly no-op.===
@@ -633,415 +630,6 @@ leave_counts_impl(Scope, Counts, Pid, Timeout)
             error
     end.
 
--else. % GROUP_NAME_WITH_LOCAL_PIDS_ONLY not defined
--define(MEMBERSHIP_CHECK(F, TRUE, FALSE), case F of ok -> TRUE;
-                                                    error -> FALSE end).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Create a group explicitly.===
-%% The calling pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec create(name()) ->
-    ok | error.
-
-create(GroupName) ->
-    create(?DEFAULT_SCOPE, GroupName, infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Create a group explicitly in a specific scope.===
-%% The calling pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec create(scope(),
-             name()) ->
-    ok | error.
-
-create(Scope, GroupName)
-    when is_atom(Scope) ->
-    create(Scope, GroupName, infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Create a group explicitly in a specific scope.===
-%% The calling pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec create(scope(),
-             name(),
-             pos_integer() | infinity) ->
-    ok | error.
-
-create(Scope, GroupName, Timeout)
-    when is_atom(Scope) ->
-    case global:trans({{Scope, GroupName}, self()},
-                      fun() ->
-                          gen_server:multi_call([node() | nodes()],
-                                                Scope,
-                                                {create, GroupName},
-                                                Timeout)
-                      end) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Delete a group explicitly.===
-%% The calling pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec delete(name()) ->
-    ok | error.
-
-delete(GroupName) ->
-    delete(?DEFAULT_SCOPE, GroupName, infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Delete a group explicitly in a specific scope.===
-%% The calling pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec delete(scope(),
-             name()) ->
-    ok | error.
-
-delete(Scope, GroupName)
-    when is_atom(Scope) ->
-    delete(Scope, GroupName, infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Delete a group explicitly in a specific scope.===
-%% The calling pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec delete(scope(),
-             name(),
-             pos_integer() | infinity) ->
-    ok | error.
-
-delete(Scope, GroupName, Timeout)
-    when is_atom(Scope) ->
-    case global:trans({{Scope, GroupName}, self()},
-                      fun() ->
-                          gen_server:multi_call([node() | nodes()],
-                                                Scope,
-                                                {delete, GroupName},
-                                                Timeout)
-                      end) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Join a specific group with self().===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec join(name()) ->
-    ok | error.
-
-join(GroupName) ->
-    join_impl(?DEFAULT_SCOPE, GroupName, self(), infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Join a specific group.===
-%% The pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec join(name(),
-           pid()) ->
-    ok | error.
-
-join(GroupName, Pid)
-    when is_pid(Pid) ->
-    join_impl(?DEFAULT_SCOPE, GroupName, Pid, infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Join a specific group in a specific scope.===
-%% The pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec join(scope() | name(),
-           name() | pid(),
-           pid() | pos_integer() | infinity) ->
-    ok | error.
-
-join(Scope, GroupName, Pid)
-    when is_atom(Scope), is_pid(Pid) ->
-    join_impl(Scope, GroupName, Pid, infinity);
-
-join(GroupName, Pid, Timeout)
-    when is_pid(Pid) ->
-    join_impl(?DEFAULT_SCOPE, GroupName, Pid, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Join a specific group in a specific scope.===
-%% The pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec join(scope(),
-           name(),
-           pid(),
-           pos_integer() | infinity) ->
-    ok | error.
-
-join(Scope, GroupName, Pid, Timeout)
-    when is_atom(Scope), is_pid(Pid) ->
-    join_impl(Scope, GroupName, Pid, Timeout).
-
-join_impl(Scope, GroupName, Pid, Timeout) ->
-    case global:trans({{Scope, GroupName}, self()},
-                      fun() ->
-                          gen_server:multi_call([node() | nodes()],
-                                                Scope,
-                                                {join, GroupName, Pid},
-                                                Timeout)
-                      end) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave all groups.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave() ->
-    ok | error.
-
-leave() ->
-    leave_impl(?DEFAULT_SCOPE, self(), infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave a specific group or all groups.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave(pid() | name()) ->
-    ok | error.
-
-leave(Pid)
-    when is_pid(Pid) ->
-    leave_impl(?DEFAULT_SCOPE, Pid, infinity);
-
-leave(GroupName) ->
-    leave_impl(?DEFAULT_SCOPE, GroupName, self(), infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave a specific group or all groups.===
-%% The pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave(name() | pid(),
-            pid() | pos_integer() | infinity) ->
-    ok | error.
-
-leave(Pid, Timeout)
-    when is_pid(Pid) ->
-    leave_impl(?DEFAULT_SCOPE, Pid, Timeout);
-
-leave(GroupName, Pid)
-    when is_pid(Pid) ->
-    leave_impl(?DEFAULT_SCOPE, GroupName, Pid, infinity).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave a specific group in a specific scope or all groups in a specific scope.===
-%% The pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave(scope() | name(),
-            name() | pid(),
-            pid() | pos_integer() | infinity) ->
-    ok | error.
-
-leave(Scope, Pid, Timeout)
-    when is_atom(Scope), is_pid(Pid) ->
-    leave_impl(Scope, Pid, Timeout);
-
-leave(Scope, GroupName, Pid)
-    when is_atom(Scope), is_pid(Pid) ->
-    leave_impl(Scope, GroupName, Pid, infinity);
-
-leave(GroupName, Pid, Timeout)
-    when is_pid(Pid) ->
-    leave_impl(?DEFAULT_SCOPE, GroupName, Pid, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave a specific group in a specific scope.===
-%% The pid does not need to be a local pid because the function uses a
-%% distributed transaction to enforce global consistency.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave(scope(),
-            name(),
-            pid(),
-            pos_integer() | infinity) ->
-    ok | error.
-
-leave(Scope, GroupName, Pid, Timeout)
-    when is_atom(Scope), is_pid(Pid) ->
-    leave_impl(Scope, GroupName, Pid, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave specific groups a specific number of times.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave_counts(list({name(), pos_integer()})) ->
-    ok | error.
-
-leave_counts(Counts)
-    when is_list(Counts) ->
-    leave_counts_impl(?DEFAULT_SCOPE, Counts, self(), ?DEFAULT_TIMEOUT).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave specific groups a specific number of times.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave_counts(list({name(), pos_integer()}) | scope(),
-                   pid() | list({name(), pos_integer()})) ->
-    ok | error.
-
-leave_counts(Counts, Pid)
-    when is_list(Counts), is_pid(Pid) ->
-    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, ?DEFAULT_TIMEOUT);
-
-leave_counts(Scope, Counts)
-    when is_atom(Scope), is_list(Counts) ->
-    leave_counts_impl(Scope, Counts, self(), ?DEFAULT_TIMEOUT).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave specific groups a specific number of times.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave_counts(scope() | list({name(), pos_integer()}),
-                   list({name(), pos_integer()}) | pid(),
-                   pid() | pos_integer() | infinity) ->
-    ok | error.
-
-leave_counts(Scope, Counts, Pid)
-    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
-    leave_counts_impl(Scope, Counts, Pid, ?DEFAULT_TIMEOUT);
-
-leave_counts(Counts, Pid, Timeout)
-    when is_list(Counts), is_pid(Pid) ->
-    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Leave specific groups a specific number of times.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec leave_counts(scope(),
-                   list({name(), pos_integer()}),
-                   pid(),
-                   pos_integer() | infinity) ->
-    ok | error.
-
-leave_counts(Scope, Counts, Pid, Timeout)
-    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
-    leave_counts_impl(Scope, Counts, Pid, Timeout).
-
-leave_impl(Scope, Pid, Timeout) ->
-    case global:trans({Scope, self()},
-                      fun() ->
-                          gen_server:multi_call([node() | nodes()],
-                                                Scope,
-                                                {leave, Pid},
-                                                Timeout)
-                      end) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
-
-leave_impl(Scope, GroupName, Pid, Timeout) ->
-    case global:trans({{Scope, GroupName}, self()},
-                      fun() ->
-                          gen_server:multi_call([node() | nodes()],
-                                                Scope,
-                                                {leave, GroupName, Pid},
-                                                Timeout)
-                      end) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
-
-leave_counts_impl(Scope, Counts, Pid, Timeout) ->
-    case global:trans({{Scope, Counts}, self()},
-                      fun() ->
-                          gen_server:multi_call([node() | nodes()],
-                                                Scope,
-                                                {leave_counts, Counts, Pid},
-                                                Timeout)
-                      end) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
-
-check_multi_call_replies([]) ->
-    ok;
-check_multi_call_replies([{_, ok} | Replies]) ->
-    check_multi_call_replies(Replies);
-check_multi_call_replies([{_, Result} | _]) ->
-    Result.
-
--endif.
-
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Provide a count of the previous joins of a specific group with self().===
@@ -1313,46 +901,54 @@ whereis_name(GroupName) ->
 
 -spec register_name(via_name(),
                     pid()) ->
-    yes | no.
+    yes.
 
 register_name({RegistrationType, Scope, GroupName, Lookup}, Pid)
     when (RegistrationType =:= global orelse
           RegistrationType =:= local), is_atom(Scope),
          (Lookup =:= random orelse Lookup =:= oldest) ->
-    ?MEMBERSHIP_CHECK(join(Scope, GroupName, Pid), yes, no);
+    ok = join(Scope, GroupName, Pid),
+    yes;
 
 register_name({RegistrationType, Scope, GroupName, Instances}, Pid)
     when (RegistrationType =:= global orelse
           RegistrationType =:= local), is_atom(Scope),
          is_integer(Instances), Instances > 0 ->
-    ?MEMBERSHIP_CHECK(join(Scope, GroupName, Pid), yes, no);
+    ok = join(Scope, GroupName, Pid),
+    yes;
 
 register_name({RegistrationType, Scope, GroupName}, Pid)
     when (RegistrationType =:= global orelse
           RegistrationType =:= local), is_atom(Scope) ->
-    ?MEMBERSHIP_CHECK(join(Scope, GroupName, Pid), yes, no);
+    ok = join(Scope, GroupName, Pid),
+    yes;
 
 register_name({RegistrationType, GroupName, Instances}, Pid)
     when (RegistrationType =:= global orelse
           RegistrationType =:= local),
          is_integer(Instances), Instances > 0 ->
-    ?MEMBERSHIP_CHECK(join(?DEFAULT_SCOPE, GroupName, Pid), yes, no);
+    ok = join(?DEFAULT_SCOPE, GroupName, Pid),
+    yes;
 
 register_name({RegistrationType, GroupName}, Pid)
     when (RegistrationType =:= global orelse
           RegistrationType =:= local) ->
-    ?MEMBERSHIP_CHECK(join(?DEFAULT_SCOPE, GroupName, Pid), yes, no);
+    ok = join(?DEFAULT_SCOPE, GroupName, Pid),
+    yes;
 
 register_name({Scope, GroupName}, Pid)
     when is_atom(Scope) ->
-    ?MEMBERSHIP_CHECK(join(Scope, GroupName, Pid), yes, no);
+    ok = join(Scope, GroupName, Pid),
+    yes;
 
 register_name({GroupName, Instances}, Pid)
     when is_integer(Instances), Instances > 0 ->
-    ?MEMBERSHIP_CHECK(join(?DEFAULT_SCOPE, GroupName, Pid), yes, no);
+    ok = join(?DEFAULT_SCOPE, GroupName, Pid),
+    yes;
 
 register_name(GroupName, Pid) ->
-    ?MEMBERSHIP_CHECK(join(?DEFAULT_SCOPE, GroupName, Pid), yes, no).
+    ok = join(?DEFAULT_SCOPE, GroupName, Pid),
+    yes.
 
 %%-------------------------------------------------------------------------
 %% @doc
