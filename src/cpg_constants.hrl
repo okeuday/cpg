@@ -6,3 +6,7 @@
 % only used if the scope application env is an empty list
 -define(DEFAULT_SCOPE, cpg_default_scope).
 
+% how long to wait for remote pid monitor deaths before sending a list of them
+% (within cpg_node_monitor)
+-define(MONITORS_ACCUMULATE_DELAY, 0). % milliseconds
+
