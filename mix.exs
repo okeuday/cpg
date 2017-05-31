@@ -44,7 +44,7 @@ defmodule CPG.Mixfile do
   defp package do
     [files: ~w(src include doc rebar.config README.md LICENSE),
      maintainers: ["Michael Truog"],
-     licenses: ["BSD"],
+     licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/okeuday/cpg"}]
    end
 end
