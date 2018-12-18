@@ -6,7 +6,7 @@ defmodule CPG.Mixfile do
 
   def project do
     [app: :cpg,
-     version: "1.7.4",
+     version: "1.7.5",
      language: :erlang,
      erlc_options: [
        {:d, :erlang.list_to_atom('ERLANG_OTP_VERSION_' ++ :erlang.system_info(:otp_release))},
@@ -48,9 +48,9 @@ defmodule CPG.Mixfile do
   end
 
   defp deps do
-    [{:trie, ">= 1.7.4"},
-     {:reltool_util, ">= 1.7.4"},
-     {:quickrand, ">= 1.7.4"}]
+    [{:trie, ">= 1.7.5"},
+     {:reltool_util, ">= 1.7.5"},
+     {:quickrand, ">= 1.7.5"}]
   end
 
   defp description do
@@ -58,7 +58,7 @@ defmodule CPG.Mixfile do
   end
 
   defp package do
-    [files: ~w(src include doc rebar.config README.md LICENSE),
+    [files: ~w(src include doc test rebar.config README.md LICENSE),
      maintainers: ["Michael Truog"],
      licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/okeuday/cpg"}]
