@@ -18,12 +18,12 @@ The cpg interface is compatible with pg2
 * By default, cpg utilizes Erlang strings for group names (list of integers) and provides the ability to set a pattern string as a group name.  A pattern string is a string that includes the `"*"` or `"?"` wildcard characters (equivalent to a ".+" regex while `"**"`, `"??"`, `"*?"`, and `"?*"` are forbidden).  When a group name is a pattern string, a process can be retrieved by matching the pattern (more information at the [CloudI FAQ](https://cloudi.org/faq.html#4_URLregex)).  To not use this approach for group names, refer to the [Usage](#usage) section below.
 * cpg provides its internal state for usage in separate Erlang processes as cached data with the `cpg_data` module.  That approach is more efficient than usage of ets.
 * Each cpg scope is an atom used as a locally registered process name for the cpg scope Erlang process.  Separate cpg scopes may be used to keep group memberships entirely separate.
-* cpg data lookups are done based on the Erlang process being local or remote, or the relative age of the process' membership to the group, or with random selection (using the terminology `closest`, `furthest`, `random`, `local`, `remote`, `oldest`, `newest`)..
+* cpg data lookups are done based on the Erlang process being local or remote, or the relative age of the local membership to the group, or with random selection (using the terminology `closest`, `furthest`, `random`, `local`, `remote`, `oldest`, `newest`).  `closest` prefers local processes if they are present while `furthest` prefers remote processes if they are present.  The `oldest` process in a group is naturally the most stable process.
 * cpg provides an interface for `via` process registry use (examples are provided in the [tests](https://github.com/okeuday/cpg/blob/master/test/cpg_tests.erl)).
 
 ### pg (>= Erlang/OTP 23)
 
-* pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies)
+* pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies and may never remove remote group members)
 * pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data)
 
 ### pg2 (=< Erlang/OTP 24)
