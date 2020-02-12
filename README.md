@@ -33,9 +33,7 @@ The cpg interface is compatible with pg2
 
 ### gproc / syn
 
-Both are focused on consistency with leader election and are unable to be
-available when suffering network or node failures.  Failures can cause
-unpredictable conflict resolution, in an attempt to achieve consistency.
+* Both are focused on consistency with leader election and are unable to be available when suffering network or node failures.  Failures can cause unpredictable conflict resolution, in an attempt to achieve consistency.
 
 ## Design
 
