@@ -23,13 +23,13 @@ The cpg interface is compatible with pg2
 
 ### pg (>= Erlang/OTP 23)
 
-* pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies and may never remove remote group members)
-* pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data)
+* pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies and may never remove remote group members).
+* pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
 
 ### pg2 (=< Erlang/OTP 24)
 
-* pg2 uses global:trans/2 which is unable to handle network or node failures
-* pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data)
+* pg2 uses global:trans/2 which is unable to handle network or node failures.
+* pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
 
 ### gproc / syn
 
