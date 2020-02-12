@@ -13,7 +13,7 @@ The cpg interface is compatible with pg2
 
 ## Features (Compare and Contrast)
 
-# cpg
+### cpg
 
 * By default, cpg utilizes Erlang strings for group names (list of integers) and provides the ability to set a pattern string as a group name.  A pattern string is a string that includes the `"*"` or `"?"` wildcard characters (equivalent to a ".+" regex while `"**"`, `"??"`, `"*?"`, and `"?*"` are forbidden).  When a group name is a pattern string, a process can be retrieved by matching the pattern (more information at the [CloudI FAQ](https://cloudi.org/faq.html#4_URLregex)).  To not use this approach for group names, refer to the [Usage](#usage) section below.
 * cpg provides its internal state for usage in separate Erlang processes as cached data with the `cpg_data` module.  That approach is more efficient than usage of ets.
@@ -21,17 +21,17 @@ The cpg interface is compatible with pg2
 * cpg data lookups are done based on the Erlang process being local or remote, or the relative age of the process' membership to the group, or with random selection (using the terminology `closest`, `furthest`, `random`, `local`, `remote`, `oldest`, `newest`)..
 * cpg provides an interface for `via` process registry use (examples are provided in the [tests](https://github.com/okeuday/cpg/blob/master/test/cpg_tests.erl)).
 
-# pg (>= Erlang/OTP 23)
+### pg (>= Erlang/OTP 23)
 
 * pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies)
 * pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data)
 
-# pg2 (=< Erlang/OTP 24)
+### pg2 (=< Erlang/OTP 24)
 
 * pg2 uses global:trans/2 which is unable to handle network or node failures
 * pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data)
 
-# gproc / syn
+### gproc / syn
 
 Both are focused on consistency with leader election and are unable to be
 available when suffering network or node failures.  Failures can cause
