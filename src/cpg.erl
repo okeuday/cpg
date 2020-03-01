@@ -4,8 +4,6 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Process Groups (CPG)==
-%%% Based on the pg2 module in the Erlang OTP kernel application
-%%% (lib/kernel-x.x.x/src/pg2.erl).
 %%% cpg relies on distributed Erlang for node communication, which means
 %%% a fully connected network topology is created.  With Distributed Erlang,
 %%% Erlang pids either exist on the local node or a remote node
@@ -13,24 +11,25 @@
 %%%  so only 1 node hop is necessary in the worst case).
 %%% @end
 %%%
-%%% The pg2 module copyright is below:
-%%% %CopyrightBegin%
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
-%%% Copyright Ericsson AB 1997-2013. All Rights Reserved.
+%%% Permission is hereby granted, free of charge, to any person obtaining a
+%%% copy of this software and associated documentation files (the "Software"),
+%%% to deal in the Software without restriction, including without limitation
+%%% the rights to use, copy, modify, merge, publish, distribute, sublicense,
+%%% and/or sell copies of the Software, and to permit persons to whom the
+%%% Software is furnished to do so, subject to the following conditions:
 %%%
-%%% Licensed under the Apache License, Version 2.0 (the "License");
-%%% you may not use this file except in compliance with the License.
-%%% You may obtain a copy of the License at
+%%% The above copyright notice and this permission notice shall be included in
+%%% all copies or substantial portions of the Software.
 %%%
-%%%     http://www.apache.org/licenses/LICENSE-2.0
-%%%
-%%% Unless required by applicable law or agreed to in writing, software
-%%% distributed under the License is distributed on an "AS IS" BASIS,
-%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-%%% See the License for the specific language governing permissions and
-%%% limitations under the License.
-%%%
-%%% %CopyrightEnd%
+%%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%%% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%%% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%%% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%%% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+%%% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+%%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
