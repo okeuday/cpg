@@ -3122,15 +3122,16 @@ listen_reset(Listen, Listen, _) ->
     ok;
 listen_reset(ListenNew, ListenOld, Scope) ->
     ok = monitor_nodes(true, ListenNew),
-    HiddenNodes = nodes(hidden),
+    HiddenNodesBefore = nodes(hidden),
     ok = monitor_nodes(false, ListenOld),
     if
         ListenNew =:= all ->
             visible = ListenOld,
-            ok = listen_reset_all(HiddenNodes, Scope);
+            ok = listen_reset_all(HiddenNodesBefore, Scope);
         ListenNew =:= visible ->
             all = ListenOld,
-            ok = listen_reset_visible(HiddenNodes, Scope)
+            HiddenNodesAfter = lists:usort(nodes(hidden) ++ HiddenNodesBefore),
+            ok = listen_reset_visible(HiddenNodesAfter, Scope)
     end,
     ok.
 

@@ -31,7 +31,7 @@ The cpg interface is compatible with pg2
 * pg2 uses global:trans/2 which is unable to handle network or node failures.
 * pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
 
-### gproc / syn
+### [gproc](https://github.com/uwiger/gproc/) / [syn](https://github.com/ostinelli/syn)
 
 * Both are focused on consistency with leader election and are unable to be available when suffering network or node failures.  Failures can cause unpredictable conflict resolution, in an attempt to achieve consistency.
 
