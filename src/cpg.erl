@@ -2995,21 +2995,9 @@ handle_cast({leave_counts, Counts, Pid},
 handle_cast(reset,
             #state{scope = Scope,
                    listen = ListenOld} = State) ->
-    Listen = cpg_app:listen_type(),
-    if
-        Listen /= ListenOld ->
-            ok = monitor_nodes(true, Listen),
-            ok = monitor_nodes(false, ListenOld),
-            if
-                Listen =:= all ->
-                    ok = gather_groups(nodes(hidden), Scope);
-                Listen =:= visible ->
-                    ok
-            end;
-        true ->
-            ok
-    end,
-    {noreply, State#state{listen = Listen}};
+    ListenNew = cpg_app:listen_type(),
+    ok = listen_reset(ListenNew, ListenOld, Scope),
+    {noreply, State#state{listen = ListenNew}};
 
 handle_cast({add_join_callback, GroupName, F},
             #state{callbacks = Callbacks} = State) ->
@@ -3129,6 +3117,35 @@ listen_nodes(visible) ->
     nodes(visible);
 listen_nodes(all) ->
     nodes(connected).
+
+listen_reset(Listen, Listen, _) ->
+    ok;
+listen_reset(ListenNew, ListenOld, Scope) ->
+    ok = monitor_nodes(true, ListenNew),
+    HiddenNodes = nodes(hidden),
+    ok = monitor_nodes(false, ListenOld),
+    if
+        ListenNew =:= all ->
+            visible = ListenOld,
+            ok = listen_reset_all(HiddenNodes, Scope);
+        ListenNew =:= visible ->
+            all = ListenOld,
+            ok = listen_reset_visible(HiddenNodes, Scope)
+    end,
+    ok.
+
+listen_reset_all(HiddenNodes, Scope) ->
+    gather_groups(HiddenNodes, Scope).
+
+listen_reset_visible([], _, _) ->
+    ok;
+listen_reset_visible([HiddenNode | HiddenNodes], HiddenNodeInfo, Scope) ->
+    Scope ! {nodedown, HiddenNode, HiddenNodeInfo},
+    listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
+
+listen_reset_visible(HiddenNodes, Scope) ->
+    HiddenNodeInfo = [{nodedown_reason, cpg_reset}, {node_type, hidden}],
+    listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
 
 join_group_local(Count, GroupName, Pid,
                  #state{groups = {DictI, GroupsDataOld},
