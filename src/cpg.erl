@@ -2664,14 +2664,9 @@ remove_leave_callback(Scope, GroupName, F)
 
 init([Scope]) ->
     Listen = cpg_app:listen_type(),
-    monitor_nodes(true, Listen),
-    lists:foreach(fun(Node) ->
-        {Scope, Node} ! {new, node()}
-        % data is not persistent in ets, so trust the
-        % Groups coming from other nodes if this server
-        % has restarted and wants previous state
-    end, listen_nodes(Listen)),
-    quickrand:seed(),
+    ok = monitor_nodes(true, Listen),
+    ok = gather_groups(listen_nodes(Listen), Scope),
+    ok = quickrand:seed(),
     {ok, #state{scope = Scope,
                 groups = cpg_data:get_empty_groups(),
                 listen = Listen}}.
@@ -2998,12 +2993,19 @@ handle_cast({leave_counts, Counts, Pid},
     end;
 
 handle_cast(reset,
-            #state{listen = ListenOld} = State) ->
+            #state{scope = Scope,
+                   listen = ListenOld} = State) ->
     Listen = cpg_app:listen_type(),
     if
         Listen /= ListenOld ->
-            monitor_nodes(true, Listen),
-            monitor_nodes(false, ListenOld);
+            ok = monitor_nodes(true, Listen),
+            ok = monitor_nodes(false, ListenOld),
+            if
+                Listen =:= all ->
+                    ok = gather_groups(nodes(hidden), Scope);
+                Listen =:= visible ->
+                    ok
+            end;
         true ->
             ok
     end,
@@ -3101,6 +3103,16 @@ code_change(_, State, _) ->
 
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}, nodedown_reason]).
+
+gather_groups([], _, _) ->
+    ok;
+gather_groups([RemoteNode | RemoteNodes], Node, Scope) ->
+    % request data to merge for current groups state
+    {Scope, RemoteNode} ! {new, Node},
+    gather_groups(RemoteNodes, Node, Scope).
+
+gather_groups(RemoteNodes, Scope) ->
+    gather_groups(RemoteNodes, node(), Scope).
 
 abcast_hidden_nodes(_, #state{listen = visible}) ->
     ok;
