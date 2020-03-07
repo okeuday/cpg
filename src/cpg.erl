@@ -2665,18 +2665,12 @@ remove_leave_callback(Scope, GroupName, F)
 init([Scope]) ->
     Listen = cpg_app:listen_type(),
     monitor_nodes(true, Listen),
-    Nodes = if
-        Listen =:= visible ->
-            nodes();
-        Listen =:= all ->
-            nodes(connected)
-    end,
     lists:foreach(fun(Node) ->
         {Scope, Node} ! {new, node()}
         % data is not persistent in ets, so trust the
         % Groups coming from other nodes if this server
         % has restarted and wants previous state
-    end, Nodes),
+    end, listen_nodes(Listen)),
     quickrand:seed(),
     {ok, #state{scope = Scope,
                 groups = cpg_data:get_empty_groups(),
@@ -3118,6 +3112,11 @@ abcast_hidden_nodes(Request, #state{scope = Scope,
         [_ | _] = HiddenNodes ->
             gen_server:abcast(HiddenNodes, Scope, Request)
     end.
+
+listen_nodes(visible) ->
+    nodes(visible);
+listen_nodes(all) ->
+    nodes(connected).
 
 join_group_local(Count, GroupName, Pid,
                  #state{groups = {DictI, GroupsDataOld},
@@ -3599,13 +3598,14 @@ merge(HistoryL_X,
       #state{groups = {DictI, GroupsData},
              monitors = Monitors,
              node_monitors = NodeMonitors,
-             callbacks = Callbacks} = State) ->
+             callbacks = Callbacks,
+             listen = Listen} = State) ->
     {GroupsDataNew,
      MonitorsNew,
      NodeMonitorsNew} = merge_pids(HistoryL_X,
                                    DictI, GroupsData, Monitors, NodeMonitors,
                                    Callbacks, node(),
-                                   sets:from_list(nodes(connected))),
+                                   sets:from_list(listen_nodes(Listen))),
     State#state{groups = {DictI, GroupsDataNew},
                 monitors = MonitorsNew,
                 node_monitors = NodeMonitorsNew}.
