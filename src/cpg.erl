@@ -2931,8 +2931,17 @@ handle_call(Request, _, State) ->
 %% @end
 
 handle_cast({exchange, Node, HistoryL},
-            #state{scope = Scope} = State) ->
+            #state{scope = Scope,
+                   listen = Listen} = State) ->
     ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
+    ListenInvalid = (Listen =:= visible) andalso
+                    (not lists:member(Node, nodes(visible))),
+    if
+        ListenInvalid =:= true ->
+            ?LOG_ERROR("listen should be 'all' for ~p monitoring", [Node]);
+        ListenInvalid =:= false ->
+            ok
+    end,
     {noreply, merge(HistoryL, State)};
 
 handle_cast({join, GroupName, Pid}, State) ->
