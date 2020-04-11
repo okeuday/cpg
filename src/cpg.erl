@@ -496,7 +496,7 @@ join_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {join, GroupName, Pid},
     ok = gen_server:call(Scope, Request, Timeout),
-    gen_server:abcast(nodes(), Scope, Request),
+    gen_server:abcast(erlang:nodes(visible), Scope, Request),
     ok.
 
 join_counts_impl(Scope, Counts, Pid, Timeout)
@@ -504,7 +504,7 @@ join_counts_impl(Scope, Counts, Pid, Timeout)
     Request = {join_counts, Counts, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+            gen_server:abcast(erlang:nodes(visible), Scope, Request),
             ok;
         error ->
             error
@@ -687,7 +687,7 @@ leave_impl(Scope, Pid, Timeout)
     Request = {leave, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+            gen_server:abcast(erlang:nodes(visible), Scope, Request),
             ok;
         error ->
             error
@@ -698,7 +698,7 @@ leave_impl(Scope, GroupName, Pid, Timeout)
     Request = {leave, GroupName, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+            gen_server:abcast(erlang:nodes(visible), Scope, Request),
             ok;
         error ->
             error
@@ -709,7 +709,7 @@ leave_counts_impl(Scope, Counts, Pid, Timeout)
     Request = {leave_counts, Counts, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+            gen_server:abcast(erlang:nodes(visible), Scope, Request),
             ok;
         error ->
             error
@@ -2935,7 +2935,7 @@ handle_cast({exchange, Node, HistoryL},
                    listen = Listen} = State) ->
     ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
     ListenInvalid = (Listen =:= visible) andalso
-                    (not lists:member(Node, nodes(visible))),
+                    (not lists:member(Node, erlang:nodes(visible))),
     if
         ListenInvalid =:= true ->
             ?LOG_ERROR("listen should be 'all' for ~p monitoring", [Node]);
@@ -3126,7 +3126,7 @@ abcast_hidden_nodes(_, #state{listen = visible}) ->
     ok;
 abcast_hidden_nodes(Request, #state{scope = Scope,
                                     listen = all}) ->
-    case nodes(hidden) of
+    case erlang:nodes(hidden) of
         [] ->
             ok;
         [_ | _] = HiddenNodes ->
@@ -3134,15 +3134,15 @@ abcast_hidden_nodes(Request, #state{scope = Scope,
     end.
 
 listen_nodes(visible) ->
-    nodes(visible);
+    erlang:nodes(visible);
 listen_nodes(all) ->
-    nodes(connected).
+    erlang:nodes(connected).
 
 listen_reset(Listen, Listen, _) ->
     ok;
 listen_reset(ListenNew, ListenOld, Scope) ->
     ok = monitor_nodes(true, ListenNew),
-    HiddenNodesBefore = nodes(hidden),
+    HiddenNodesBefore = erlang:nodes(hidden),
     ok = monitor_nodes(false, ListenOld),
     if
         ListenNew =:= all ->
@@ -3150,7 +3150,8 @@ listen_reset(ListenNew, ListenOld, Scope) ->
             ok = listen_reset_all(HiddenNodesBefore, Scope);
         ListenNew =:= visible ->
             all = ListenOld,
-            HiddenNodesAfter = lists:usort(nodes(hidden) ++ HiddenNodesBefore),
+            HiddenNodesAfter = lists:usort(erlang:nodes(hidden) ++
+                                           HiddenNodesBefore),
             ok = listen_reset_visible(HiddenNodesAfter, Scope)
     end,
     ok.
