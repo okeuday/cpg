@@ -2935,7 +2935,8 @@ handle_cast({exchange, Node, HistoryL},
                    listen = Listen} = State) ->
     ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
     ListenInvalid = (Listen =:= visible) andalso
-                    (not lists:member(Node, erlang:nodes(visible))),
+                    (not lists:member(Node, listen_nodes(visible))) andalso
+                    lists:member(Node, listen_nodes(all)),
     if
         ListenInvalid =:= true ->
             ?LOG_ERROR("listen should be 'all' for ~p monitoring", [Node]);
