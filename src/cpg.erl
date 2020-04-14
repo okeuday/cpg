@@ -2645,9 +2645,9 @@ ignore_node(Node, [_ | _] = NodeNameLocal) ->
     boolean().
 
 valid_node(Node) ->
-    {NodeName, Length, _} = node_split(Node),
+    {NodeName, Length, Host} = node_split(Node),
     if
-        Length == 0 ->
+        Length == 0; Host == [] ->
             false;
         Length > 0 ->
             valid_node(NodeName, Length)
@@ -3324,6 +3324,7 @@ reset_all_recv([Scope | Scopes]) ->
 listen_reset(Listen, Listen, _, _) ->
     ok;
 listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal) ->
+    % may cause duplicate nodeup/nodedown messages to avoid ignoring events
     ok = monitor_nodes(true, ListenNew),
     HiddenNodesBefore = hidden_nodes(NodeNameLocal),
     ok = monitor_nodes(false, ListenOld),
@@ -3333,9 +3334,10 @@ listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal) ->
             ok = listen_reset_all(HiddenNodesBefore, Scope);
         ListenNew =:= visible ->
             all = ListenOld,
-            HiddenNodesAfter = lists:usort(hidden_nodes(NodeNameLocal) ++
-                                           HiddenNodesBefore),
-            ok = listen_reset_visible(HiddenNodesAfter, Scope)
+            HiddenNodesAfter = hidden_nodes(NodeNameLocal),
+            ok = listen_reset_visible(lists:usort(HiddenNodesBefore ++
+                                                  HiddenNodesAfter),
+                                      Scope)
     end,
     ok.
 
