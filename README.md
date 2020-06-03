@@ -20,7 +20,7 @@ The cpg interface is compatible with pg2
 * Each cpg scope is an atom used as a locally registered process name for the cpg scope Erlang process.  Separate cpg scopes may be used to keep group memberships entirely separate.
 * cpg data lookups are done based on the Erlang process being local or remote, or the relative age of the local membership to the group, or with random selection (using the terminology `closest`, `furthest`, `random`, `local`, `remote`, `oldest`, `newest`).  `closest` prefers local processes if they are present while `furthest` prefers remote processes if they are present.  The `oldest` process in a group is naturally the most stable process.
 * cpg provides an interface for `via` process registry use (examples are provided in the [tests](https://github.com/okeuday/cpg/blob/master/test/cpg_tests.erl)).
-* cpg [supports](#usage) hidden node connections (hidden node connections are a way to avoid distributed Erlang node connection limitations by not creating a fully-connected network topology)
+* cpg [supports](#usage) hidden node connections (hidden node connections are a way to avoid distributed Erlang node connection limitations by not creating a fully-connected network topology).
 
 ### pg (>= Erlang/OTP 23) (https://github.com/max-au/spg)
 
