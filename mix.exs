@@ -48,9 +48,9 @@ defmodule CPG.Mixfile do
   end
 
   defp deps do
-    [{:trie, ">= 2.0.3", app: false},
-     {:reltool_util, ">= 2.0.3", app: false},
-     {:quickrand, ">= 2.0.3", app: false}]
+    [{:trie, "~> 2.0.3", app: false},
+     {:reltool_util, "~> 2.0.3", app: false},
+     {:quickrand, "~> 2.0.3", app: false}]
   end
 
   defp description do
