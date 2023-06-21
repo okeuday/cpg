@@ -6,7 +6,7 @@ defmodule CPG.Mixfile do
 
   def project do
     [app: :cpg,
-     version: "2.0.5",
+     version: "2.0.6",
      language: :erlang,
      erlc_options: [
        {:d, :erlang.list_to_atom('ERLANG_OTP_VERSION_' ++ :erlang.system_info(:otp_release))},
@@ -40,9 +40,9 @@ defmodule CPG.Mixfile do
   end
 
   defp deps do
-    [{:trie, ">= 2.0.5"},
-     {:reltool_util, ">= 2.0.5"},
-     {:quickrand, ">= 2.0.5"}]
+    [{:trie, ">= 2.0.6"},
+     {:reltool_util, ">= 2.0.6"},
+     {:quickrand, ">= 2.0.6"}]
   end
 
   defp description do
