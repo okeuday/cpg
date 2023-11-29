@@ -59,7 +59,7 @@ module_test_() ->
         {"pid age test 1", ?_assertOk(t_pid_age_1())},
         {"pid age test 2", ?_assertOk(t_pid_age_2())},
         {"callbacks test", ?_assertOk(t_callbacks())},
-        {"pid counts test", ?_assertOk(t_pid_counts())},
+        {"pid counts test", ?_assertOk(t_pid_counts())}%,
         % commented due to Travis rebar3 compilation error for
         %   Erlang/OTP versions /= 23:
         % {error,{"no such file or directory","hipe.app"}}
