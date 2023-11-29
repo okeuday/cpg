@@ -9,7 +9,7 @@ before_script:
   - rebar3 get-deps
 script:
   - rebar3 compile
-  - rebar3 ct
+  - rebar3 eunit -s cpg_tests
 after_script:
   - rebar3 clean
 branches:
