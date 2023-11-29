@@ -60,7 +60,10 @@ module_test_() ->
         {"pid age test 2", ?_assertOk(t_pid_age_2())},
         {"callbacks test", ?_assertOk(t_callbacks())},
         {"pid counts test", ?_assertOk(t_pid_counts())},
-        {"cpg stop", ?_assertOk(reltool_util:application_stop(cpg))}
+        % commented due to Travis rebar3 compilation error for
+        %   Erlang/OTP versions /= 23:
+        % {error,{"no such file or directory","hipe.app"}}
+        %{"cpg stop", ?_assertOk(reltool_util:application_stop(cpg))}
     ]}.
 
 t_via_1() ->

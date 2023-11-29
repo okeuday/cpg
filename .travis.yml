@@ -6,12 +6,12 @@ otp_release:
   - 23.3.1
   - 22.3.4.25
 before_script:
-  - mkdir deps && git clone --branch CloudI --depth 1 https://github.com/okeuday/rebar.git deps/rebar && cd deps/rebar && ./bootstrap && mv ./rebar ../.. && cd ../..
-  - ./rebar get-deps
+  - rebar3 get-deps
 script:
-  - ./rebar compile eunit
+  - rebar3 compile
+  - rebar3 eunit -s cpg_tests
 after_script:
-  - ./rebar clean
+  - rebar3 clean
 branches:
   only:
     - master
